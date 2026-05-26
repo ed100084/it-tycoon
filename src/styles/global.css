@@ -1,0 +1,78 @@
+/* ─── Reset & Base ─────────────────────────────────────────── */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+:root {
+  /* Phosphor color palette */
+  --crt-green:       #00ff41;
+  --crt-green-dim:   #00aa2b;
+  --crt-green-dark:  #004d10;
+  --crt-yellow:      #ffe000;
+  --crt-yellow-dim:  #aa9500;
+  --crt-red:         #ff4444;
+  --crt-red-dim:     #aa2222;
+  --crt-blue:        #00aaff;
+  --crt-blue-dim:    #006699;
+  --crt-orange:      #ff8800;
+
+  /* Background */
+  --crt-bg:          #000d00;
+  --crt-bg-panel:    #001500;
+  --crt-bg-card:     #001a00;
+  --crt-bg-hover:    #002800;
+  --crt-border:      #00aa2b;
+  --crt-border-dim:  #004d10;
+
+  /* Typography */
+  --font-mono: 'Courier New', 'Lucida Console', monospace;
+
+  /* Glow intensities */
+  --glow-sm:  0 0 4px currentColor;
+  --glow-md:  0 0 4px currentColor, 0 0 10px currentColor;
+  --glow-lg:  0 0 4px currentColor, 0 0 10px currentColor, 0 0 25px currentColor;
+}
+
+html, body, #root {
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+}
+
+body {
+  background: #000;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--crt-green);
+  -webkit-font-smoothing: none;
+  font-smooth: never;
+}
+
+button {
+  font-family: var(--font-mono);
+  cursor: pointer;
+  border: none;
+  background: none;
+}
+
+button:focus-visible {
+  outline: 1px solid var(--crt-green);
+  outline-offset: 2px;
+}
+
+/* ─── Scrollbar ────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--crt-bg); }
+::-webkit-scrollbar-thumb { background: var(--crt-green-dark); }
+::-webkit-scrollbar-thumb:hover { background: var(--crt-green-dim); }
+
+/* ─── Color utility classes ────────────────────────────────── */
+.glow-green     { color: var(--crt-green);      text-shadow: var(--glow-md); }
+.glow-green-dim { color: var(--crt-green-dim);  text-shadow: var(--glow-sm); }
+.glow-yellow    { color: var(--crt-yellow);     text-shadow: var(--glow-md); }
+.glow-red       { color: var(--crt-red);        text-shadow: var(--glow-md); }
+.glow-blue      { color: var(--crt-blue);       text-shadow: var(--glow-md); }
+.glow-orange    { color: var(--crt-orange);     text-shadow: var(--glow-md); }
