@@ -204,164 +204,189 @@ macroEventMod = 由歷史事件動態調整（見 Section 12）
 
 ## Section 3：硬體系統（真實型號，依年份解鎖）
 
+> **完整採購目錄**分為三份文件：
+> - **目錄索引** → [catalog.md](catalog.md)（快速查閱各時代代表型號及特殊事件）
+> - **附錄 A：硬體** → [appendix-hardware-catalog.md](appendix-hardware-catalog.md)（運算/儲存/網路/機房設施/機櫃，5 時代 × 10 類別，200+ 型號）
+> - **附錄 B：軟體** → [appendix-software-catalog.md](appendix-software-catalog.md)（備份/DR/虛擬化/OS/資料庫/資安，涵蓋所有時代）
+
 ### 3.1 解鎖機制
 
 硬體型號按遊戲年份自動解鎖。同一時代的設備可共存，舊設備仍可購買但無法購買未來時代的設備。
 
-### 3.2 硬體型號總覽
+### 3.2 採購類別與品牌覆蓋
 
-#### 伺服器（2U 機架）
+遊戲採購系統涵蓋 10 大類別，每類別在各時代均有 3–6 個品牌/型號可選：
 
-| 年份 | 型號 | CPS/月 | 功耗(W) | 採購價(NT$) | 保固 | EOL年份 |
-|------|------|--------|---------|-----------|------|--------|
-| 2000 | Dell PowerEdge 2650 | 2,000 | 250 | 180,000 | 3年 | 2008 |
-| 2000 | HP ProLiant DL380 G2 | 1,800 | 230 | 165,000 | 3年 | 2007 |
-| 2002 | Sun Fire V440 | 3,500 | 400 | 350,000 | 3年 | 2010 |
-| 2003 | HP ProLiant DL380 G3 | 4,000 | 300 | 220,000 | 3年 | 2010 |
-| 2005 | Dell PowerEdge 1950 | 8,000 | 350 | 280,000 | 3年 | 2013 |
-| 2006 | HP ProLiant DL360 G5 | 9,000 | 380 | 310,000 | 3年 | 2014 |
-| 2008 | Dell PowerEdge R610 | 18,000 | 420 | 380,000 | 3年 | 2016 |
-| 2010 | HP ProLiant DL360 G7 | 35,000 | 460 | 450,000 | 3年 | 2018 |
-| 2010 | Dell PowerEdge R710 | 38,000 | 480 | 480,000 | 3年 | 2018 |
-| 2012 | Dell PowerEdge R720 | 75,000 | 500 | 580,000 | 3年 | 2020 |
-| 2014 | HP ProLiant DL380 Gen9 | 120,000 | 520 | 650,000 | 3年 | 2022 |
-| 2015 | Dell PowerEdge R730 | 150,000 | 550 | 720,000 | 3年 | 2023 |
-| 2018 | Dell PowerEdge R740 | 300,000 | 580 | 850,000 | 3年 | 2026 |
-| 2020 | Dell PowerEdge R750 | 600,000 | 600 | 1,200,000 | 3年 | 2028 |
-| 2022 | HP ProLiant DL360 Gen10+ | 800,000 | 620 | 1,400,000 | 3年 | 2030 |
-| 2023 | Dell PowerEdge R760 | 1,200,000 | 650 | 1,800,000 | 3年 | 2031 |
+| 類別 | 子類 | 主要品牌 |
+|------|------|---------|
+| **運算 (Compute)** | 機架/刀鋒/HCI/GPU | Dell, HP/HPE, IBM, Lenovo, Cisco UCS, Supermicro, Sun/Oracle |
+| **儲存 (Storage)** | SAN/NAS/All-Flash/物件 | Dell EMC, NetApp, Pure Storage, Hitachi Vantara, IBM, Synology |
+| **網路 (Networking)** | 交換器/路由器/防火牆/負載均衡 | Cisco, Juniper, Arista, Fortinet, Palo Alto, F5, A10, Check Point |
+| **機房設施 (Facility)** | UPS/精密空調/PDU | APC/Schneider, Eaton, Emerson/Vertiv |
+| **機櫃 (Rack)** | 42U/48U 機架/配件 | APC NetShelter, Rittal, Middle Atlantic |
+| **環境監控** | 溫濕度/DCIM | APC NetBotz, Schneider EcoStruxure, Vertiv Environet |
+| **消防系統** | 氣體滅火 | Kidde FM-200, Ansul Inergen（含 Halon 汰換事件）|
+| **備份/DR** | 軟體備份/異地複製 | Veeam, CommVault, Veritas, Acronis, Zerto, Cohesity, Rubrik |
+| **虛擬化/容器** | Hypervisor/K8s | VMware, Hyper-V, Citrix XenServer, KVM, Proxmox, Docker, OpenShift |
+| **資安設備** | NGFW/SIEM/端點/弱掃 | Fortinet, Palo Alto, CrowdStrike, Splunk, IBM QRadar, Tenable |
 
-#### GPU/AI 節點
+### 3.3 時代代表型號（游戲內 CPS 基準值）
 
-| 年份 | 型號 | AI CPS/月 | 功耗(W) | 採購價(NT$) | EOL年份 |
-|------|------|----------|---------|-----------|--------|
-| 2012 | NVIDIA Tesla K10 | 50,000 | 225 | 120,000 | 2018 |
-| 2016 | NVIDIA Tesla P100 | 200,000 | 300 | 350,000 | 2022 |
-| 2018 | NVIDIA Tesla V100 | 500,000 | 350 | 600,000 | 2024 |
-| 2020 | NVIDIA A100 40GB | 1,500,000 | 400 | 1,200,000 | 2026 |
-| 2022 | NVIDIA A100 80GB | 2,000,000 | 400 | 1,500,000 | 2027 |
-| 2023 | NVIDIA H100 SXM5 | 5,000,000 | 700 | 3,500,000 | 2028 |
-| 2024 | NVIDIA H200 | 8,000,000 | 700 | 5,000,000 | 2029 |
+以下為每個時代**各類別的代表性型號**，用於定義 CPS 基準。完整採購清單見 [appendix-hardware-catalog.md](appendix-hardware-catalog.md) 及 [appendix-software-catalog.md](appendix-software-catalog.md)。
 
-*GPU 節點只有在解鎖 AI/ML 服務合約後才計入 CPS*
+#### Era 1（2000–2004）前虛擬化時代
 
-#### 刀鋒伺服器機箱
+| 類型 | 代表型號 | CPS/月(NT$) | 功耗(W) | 採購價(NT$) | EOL |
+|------|---------|-----------|---------|-----------|-----|
+| 1U 伺服器 | Dell PowerEdge 2650 | 2,000 | 250 | 180,000 | 2008 |
+| 2U 伺服器 | HP ProLiant DL380 G2 | 1,800 | 230 | 165,000 | 2007 |
+| UNIX 伺服器 | Sun Fire V440（高 CPS，高成本）| 3,500 | 400 | 350,000 | 2010 |
+| SAN 儲存 | EMC Clariion CX200 | 效能加成 ×1.3 | — | 1,050,000 | 2010 |
+| NAS 儲存 | NetApp FAS270c | 效能加成 ×1.2 | — | 660,000 | 2010 |
+| 核心交換 | Cisco Catalyst 3550 | 網路效能 +10% | 50 | 165,000 | 2011 |
+| 防火牆 | Cisco PIX 515E | 資安防護 Lv1 | 45 | 135,000 | 2009 |
+| UPS | APC Smart-UPS RT 5000VA | 電力保護 Lv1 | — | 120,000 | 2015 |
+| 機櫃 | APC NetShelter SX 42U | 容量 42U | — | 54,000 | — |
+| 備份軟體 | Veritas NetBackup 4.5 | 備份覆蓋率 +30% | — | 150,000/yr | 2015 |
 
-| 年份 | 型號 | 插槽 | 基礎 CPS/月（裝滿）| 採購價(NT$) | EOL年份 |
-|------|------|------|-----------------|-----------|--------|
-| 2006 | Dell PowerEdge M1000e | 16 blade | 依插入刀鋒決定 | 180,000 | 2018 |
-| 2010 | HP BladeSystem c7000 | 16 blade | 依插入刀鋒決定 | 220,000 | 2020 |
-| 2015 | Cisco UCS 5108 | 8 blade | 依插入刀鋒決定 | 350,000 | 2025 |
+#### Era 2（2005–2009）虛擬化萌芽
 
-#### 超融合基礎設施 (HCI)
+| 類型 | 代表型號 | CPS/月(NT$) | 功耗(W) | 採購價(NT$) | EOL |
+|------|---------|-----------|---------|-----------|-----|
+| 1U 伺服器 | Dell PowerEdge 1950 | 8,000 | 350 | 122,000 | 2013 |
+| 2U 伺服器 | HP ProLiant DL380 G5 | 9,500 | 380 | 176,000 | 2014 |
+| 刀鋒機箱 | Dell PowerEdge M1000e | 依刀鋒 | 2,500 | 256,000 | 2018 |
+| SAN 儲存 | EMC Clariion CX3-40 | 效能加成 ×1.5 | — | 1,760,000 | 2012 |
+| iSCSI SAN | Dell EqualLogic PS6000 | 效能加成 ×1.3 | — | 800,000 | 2018 |
+| DC 交換 | Juniper EX3200-24T | 網路效能 +15% | 80 | 192,000 | 2018 |
+| UTM 防火牆 | Fortinet FortiGate 300A | 資安防護 Lv2 | 90 | 128,000 | 2014 |
+| UPS | APC Symmetra PX 20kVA | 電力保護 Lv2 | — | 576,000 | 2020 |
+| 機櫃 | APC NetShelter SX 48U | 容量 48U | — | 80,000 | — |
+| 備份 | Veeam B&R 1.0（虛擬化備份）| 備份覆蓋率 +50% | — | 48,000/yr | — |
 
-| 年份 | 型號 | CPS/月（3節點起）| 採購價(NT$/節點）| EOL年份 |
-|------|------|----------------|----------------|--------|
-| 2015 | Nutanix NX-3000 | 400,000 | 1,500,000 | 2023 |
-| 2017 | VMware vSAN ReadyNode | 350,000 | 1,200,000 | 2025 |
-| 2020 | Nutanix NX-8035-G8 | 1,200,000 | 3,500,000 | 2028 |
+#### Era 3（2010–2014）雲端崛起
 
-#### 網路設備
+| 類型 | 代表型號 | CPS/月(NT$) | 功耗(W) | 採購價(NT$) | EOL |
+|------|---------|-----------|---------|-----------|-----|
+| 1U 伺服器 | Dell PowerEdge R610 | 18,000 | 420 | 124,000 | 2016 |
+| 2U 伺服器 | HP ProLiant DL380 G7 | 35,000 | 460 | 176,000 | 2018 |
+| 刀鋒 | Cisco UCS B200 M2 | 40,000 | 480 | 176,000 | 2017 |
+| All-Flash SAN | Pure Storage FlashArray //m10 | 效能加成 ×3 | — | 3,840,000 | 2022 |
+| 企業 NAS | NetApp FAS2240 | 效能加成 ×2 | — | 896,000 | 2018 |
+| 10GbE DC | Arista 7050SX | 網路效能 +25% | 200 | 704,000 | 2022 |
+| NGFW | Palo Alto PA-3020 | 資安防護 Lv3 | 150 | 512,000 | 2022 |
+| UPS | APC Symmetra PX 80kVA | 電力保護 Lv3 | — | 1,440,000 | 2025 |
+| 精密空調 | APC InRow RC 10kW | PUE −0.15 | — | 384,000 | 2020 |
+| 備份 | CommVault Simpana 10 | 備份覆蓋率 +60% | — | 480,000/yr | — |
 
-| 年份 | 型號 | 功能 | 採購價(NT$) | EOL年份 |
-|------|------|------|-----------|--------|
-| 2000 | Cisco Catalyst 3550 | Layer 3 Switch | 80,000 | 2011 |
-| 2003 | Cisco Catalyst 3750 | Stackable Switch | 120,000 | 2016 |
-| 2006 | Juniper EX3200 | Enterprise Switch | 150,000 | 2018 |
-| 2010 | Cisco Nexus 5010 | 10GbE DC Switch | 450,000 | 2020 |
-| 2013 | Cisco Catalyst 6880-X | Core Switch | 800,000 | 2023 |
-| 2016 | Arista 7050CX3 | 100GbE Switch | 1,200,000 | 2026 |
-| 2020 | Cisco Nexus 93360YC-FX2 | 400GbE Ready | 2,000,000 | 2030 |
+#### Era 4（2015–2019）超融合與容器
 
-#### 儲存設備
+| 類型 | 代表型號 | CPS/月(NT$) | 功耗(W) | 採購價(NT$) | EOL |
+|------|---------|-----------|---------|-----------|-----|
+| 2U 伺服器 | Dell PowerEdge R730 | 150,000 | 550 | 186,000 | 2023 |
+| HCI 節點 | Nutanix NX-3000 | 400,000 | 1,200 | 1,600,000 | 2023 |
+| All-Flash | Pure Storage //X50 | 效能加成 ×5 | — | 8,960,000 | — |
+| 100GbE 交換 | Arista 7060CX-32S | 網路效能 +40% | 350 | 704,000 | 2025 |
+| 企業 NGFW | Palo Alto PA-5220 | 資安防護 Lv4 | 230 | 1,760,000 | — |
+| UPS（大型）| Eaton 9395P 500kVA | 電力保護 Lv4 | — | 6,400,000 | — |
+| 液冷空調 | Vertiv Liebert DM 100kW | PUE −0.25 | — | 2,560,000 | — |
+| SIEM | Splunk Enterprise Security | 事件偵測 +30% | — | 1,120,000/yr | — |
+| 備份 | Veeam B&R 9.5 + Zerto | 備份+DR 完整 | — | 544,000/yr | — |
 
-| 年份 | 型號 | 容量 | 採購價(NT$) | EOL年份 |
-|------|------|------|-----------|--------|
-| 2000 | EMC Clariion CX200 | 4TB SAN | 800,000 | 2010 |
-| 2004 | NetApp FAS2020 | 12TB NAS | 500,000 | 2014 |
-| 2008 | EMC VNX 5500 | 100TB SAN | 2,000,000 | 2020 |
-| 2012 | Pure Storage FlashArray | 50TB All-Flash | 4,000,000 | 2022 |
-| 2015 | Dell EMC Unity 380F | 200TB All-Flash | 5,000,000 | 2025 |
-| 2018 | NetApp AFF A700 | 1PB NVMe | 8,000,000 | 2026 |
-| 2021 | Pure Storage //X70R3 | 2PB NVMe | 15,000,000 | 2029 |
+#### Era 5（2020–2025）AI 基礎設施競賽
 
-### 3.3 硬體採購成本公式
+| 類型 | 代表型號 | CPS/月(NT$) | 功耗(W) | 採購價(NT$) | EOL |
+|------|---------|-----------|---------|-----------|-----|
+| 2U AI 伺服器 | Dell PowerEdge R750 | 600,000 | 600 | 225,000 | 2028 |
+| GPU 節點 | NVIDIA DGX H100 | 5,000,000 | 10,200 | 9,000,000 | 2028 |
+| AI 儲存 | VAST Data / WekaIO | AI CPS ×1.5 | — | 4,500,000+ | — |
+| 400GbE / InfiniBand | NVIDIA Spectrum-4 SN5600 | AI fabric | 2,500 | 3,600,000 | — |
+| 企業 NGFW | Palo Alto PA-7050 | 資安防護 Lv5 | 400 | 7,500,000 | — |
+| 浸沒冷卻 | GRC ICEraQ | PUE −0.45 | — | 1,800,000/tank | — |
+| AI DCIM | Schneider EcoStruxure IT | 運營效率 +15% | — | 450,000/yr | — |
+| SIEM | Microsoft Sentinel | 事件偵測 +40% | — | 450,000/yr | — |
+
+### 3.4 採購成本公式
 
 ```
 實際採購價 = 基礎採購價 × 1.15^(已擁有同型台數) × econHardwareMod × exchangeRateMod
 
 econHardwareMod：受景氣循環、晶片短缺等國際事件影響（0.7–2.5）
 exchangeRateMod：匯率波動影響進口設備（0.9–1.3）
+
+ODM 品牌（Supermicro）基礎採購價 × 0.75（性價比高，但管理工具加成 −10%）
+品牌溢價（IBM, Cisco UCS）基礎採購價 × 1.25（管理工具加成 +10%）
 ```
+
+### 3.5 特殊採購事件（目錄詳見 catalog.md）
+
+| 事件 | 時間 | 效果 |
+|------|------|------|
+| Halon 汰換強制令 | 2003–2007 | 現有 Halon 消防系統需強制更換 FM-200，費用 NT$50萬/區域 |
+| CentOS 8 提前 EOL | 2021/01 | 所有 CentOS 8 系統 1 年內需遷移 Rocky Linux/AlmaLinux |
+| VMware Broadcom 漲價 | 2023/10 | VMware vSphere 授權費強制 ×2.5，需評估遷移 KVM/OpenShift |
+| MySQL 5.7 EOS | 2023/10 | complianceMod ×1.5，需升級至 MySQL 8 或 PostgreSQL |
+| NVIDIA H100 缺貨 | 2023/06 | 採購等待 +300s，溢價 ×4；有「AI 訓練叢集」科技樹可優先配額 |
 
 ---
 
 ## Section 4：軟體授權系統（真實產品，依年份解鎖）
 
-### 4.1 作業系統
+> **完整軟體版本清單**請見 [docs/catalog.md](catalog.md) — 作業系統、虛擬化、資料庫、資安軟體各有完整的版本歷史、授權費(USD)及 EOS 年份。
 
-| 年份 | 產品 | 授權類型 | 年授權費(NT$/伺服器) | EOS年份 |
-|------|------|---------|------------------|--------|
-| 2000 | Windows Server 2000 | 永久+SA | 20,000 | 2010 |
-| 2000 | Red Hat Enterprise Linux 2.1 | 年訂閱 | 12,000 | 2009 |
-| 2003 | Windows Server 2003 | 永久+SA | 25,000 | 2015 |
-| 2004 | Red Hat Enterprise Linux 3 | 年訂閱 | 15,000 | 2010 |
-| 2007 | Windows Server 2008 | 永久+SA | 32,000 | 2020 |
-| 2007 | Red Hat Enterprise Linux 5 | 年訂閱 | 20,000 | 2020 |
-| 2010 | Red Hat Enterprise Linux 6 | 年訂閱 | 28,000 | 2024 |
-| 2012 | Windows Server 2012 | 永久+SA | 40,000 | 2023 |
-| 2014 | Red Hat Enterprise Linux 7 | 年訂閱 | 35,000 | 2028 |
-| 2016 | Windows Server 2016 | 永久+SA | 50,000 | 2027 |
-| 2019 | Windows Server 2019 | 永久+SA | 60,000 | 2029 |
-| 2019 | Red Hat Enterprise Linux 8 | 年訂閱 | 45,000 | 2029 |
-| 2022 | Windows Server 2022 | 永久+SA | 70,000 | 2031 |
-| 2022 | Red Hat Enterprise Linux 9 | 年訂閱 | 55,000 | 2032 |
+### 4.1 授權類型與成本策略
 
-*免費作業系統（CentOS, Ubuntu）無授權費但 EOS 後無官方支援，資安風險加成 ×1.5*
+| 授權類型 | 說明 | 成本特性 | 風險 |
+|---------|------|---------|------|
+| 永久授權+SA | Windows Server, Oracle, SQL Server | 高前期 CapEx，低年費 | EOS 強制升級成本 |
+| 年訂閱 | RHEL, SLES | 低前期，持續 OpEx | 停止訂閱即 EOS |
+| 免費開源 | Ubuntu, CentOS, MySQL, PostgreSQL, KVM | 零授權費 | 運維成本高，EOS 無廠商保護 |
+| SaaS/雲端 | Microsoft Sentinel, Qualys, CrowdStrike | 按月/年計費 | 費率隨市場調整 |
 
-### 4.2 虛擬化平台
+### 4.2 作業系統（摘要）
 
-| 年份 | 產品 | 授權類型 | 年授權費(NT$/主機) | EOS年份 | 效果 |
-|------|------|---------|----------------|--------|------|
-| 2001 | VMware ESX 1.5 | 永久 | 60,000 | 2008 | 密度 ×2 |
-| 2004 | VMware ESX 3.0 | 永久+SA | 80,000 | 2010 | 密度 ×2.5 |
-| 2006 | Xen 3.0 (開源) | 免費 | 0 | — | 密度 ×1.8 |
-| 2008 | VMware vSphere 4 | 永久+SA | 100,000 | 2014 | 密度 ×3, HA支援 |
-| 2009 | KVM (開源) | 免費 | 0 | — | 密度 ×2 |
-| 2012 | VMware vSphere 5.5 | 永久+SA | 130,000 | 2018 | 密度 ×4, vSAN |
-| 2013 | Microsoft Hyper-V 2012 R2 | Windows授權含 | 0 | 2023 | 密度 ×2.5 |
-| 2015 | VMware vSphere 6.5 | 永久+SA | 160,000 | 2022 | 密度 ×5 |
-| 2018 | VMware vSphere 6.7 | 永久+SA | 180,000 | 2022 | 密度 ×6 |
-| 2020 | VMware vSphere 7 | 訂閱 | 200,000 | 2025 | 密度 ×8, K8s整合 |
-| 2023 | VMware vSphere 8 (Broadcom) | 訂閱（費率大漲）| 450,000 | 2027 | 密度 ×10 |
+| 年份 | 產品系列 | 代表版本 | NT$/yr | EOS | 資安評級 |
+|------|---------|---------|--------|-----|---------|
+| 2000+ | Windows Server | 2000/2003/2008/2012/2016/2019/2022 | 20,000–70,000 | 見目錄 | 商業支援 |
+| 2002+ | Red Hat Enterprise Linux | 2.1–9 | 10,500–51,000 | 見目錄 | 商業支援 |
+| 2004+ | SUSE Linux Enterprise Server | 9–15 | 21,000–42,000 | 見目錄 | 商業支援 |
+| 2006+ | Ubuntu Server LTS | 6.06–22.04 | 免費（Ubuntu Pro 可選）| 見目錄 | 社群/Canonical |
+| 2004+ | CentOS | 3–8 | 免費 | 見目錄 ⚠️ | 社群（2021後停）|
 
-*注意：2023年 Broadcom 收購 VMware 後授權費暴增 ×2.5，觸發特殊事件*
+*⚠️ CentOS 8 特殊事件：2021年1月宣布提前 EOL，觸發系統緊急通知*
 
-### 4.3 容器與編排平台
+### 4.3 虛擬化 / 容器平台（摘要）
 
-| 年份 | 產品 | 月授權費(NT$/叢集) | EOS年份 | 效果 |
-|------|------|----------------|--------|------|
-| 2013 | Docker CE (開源) | 0 | — | 容器化加成 ×1.5 |
-| 2015 | Kubernetes 1.0 (開源) | 0 | — | 容器編排，管理 U 數效率 +20% |
-| 2016 | Red Hat OpenShift 3 | 30,000 | 2022 | 企業 K8s，SLA +1 tier |
-| 2019 | Red Hat OpenShift 4 | 45,000 | 2027 | 全自動化，staffEfficiency +0.15 |
-| 2020 | Rancher (SUSE) | 20,000 | — | 多叢集管理 |
+| 年份 | 產品 | NT$/yr | EOS | 效果 |
+|------|------|--------|-----|------|
+| 2001–2022 | VMware ESX → vSphere | 75,000–180,000 | 見目錄 | 密度 ×2→×8 |
+| 2022+ | VMware vSphere 8（Broadcom）| **600,000** ⚠️ | 2027 | 密度 ×10（漲 ×2.5）|
+| 2008+ | Microsoft Hyper-V | 含 Windows 授權 | 見目錄 | 密度 ×2.5→×4 |
+| 2008+ | Citrix XenServer/Hypervisor | 免費 | 2024 | 密度 ×2→×3 |
+| 2007+ | KVM（開源）| 免費 | — | 密度 ×2，需技術人力 |
+| 2015+ | Proxmox VE（開源）| 免費/訂閱 | — | 密度 ×3→×4 |
+| 2014+ | Docker + Kubernetes（開源）| 免費 | — | 容器密度 ×5，K8s 編排 |
+| 2015+ | Red Hat OpenShift | 320,000–420,000/yr | 見目錄 | 企業 K8s，SLA 保障 |
 
-### 4.4 資料庫
+### 4.4 資料庫（摘要）
 
-| 年份 | 產品 | 年授權費(NT$/伺服器) | EOS年份 |
-|------|------|------------------|--------|
-| 2000 | Oracle Database 9i | 500,000 | 2010 |
-| 2000 | Microsoft SQL Server 2000 | 80,000 | 2013 |
-| 2000 | MySQL 3.x (開源) | 0 | — |
-| 2003 | Oracle Database 10g | 600,000 | 2013 |
-| 2005 | Microsoft SQL Server 2005 | 100,000 | 2016 |
-| 2008 | Oracle Database 11g | 800,000 | 2020 |
-| 2010 | PostgreSQL 9 (開源) | 0 | — |
-| 2012 | Microsoft SQL Server 2012 | 150,000 | 2022 |
-| 2013 | Oracle Database 12c | 1,000,000 | 2024 |
+| 類別 | 產品 | 成本 | 特性 |
+|------|------|------|------|
+| 企業商業 | Oracle Database | NT$750,000–1,600,000/processor/yr | 最高 CPS 加成，但授權費天文數字 |
+| 微軟生態 | SQL Server | NT$150,000–430,000/server | Windows 環境首選，EOS 風險中等 |
+| 開源免費 | MySQL, PostgreSQL | 免費 | 無授權費但版本更新有 EOS 問題 |
+| 新世代 | MongoDB, Redis | 免費/訂閱 | AI 應用首選，彈性授權 |
 
-### 4.5 EOL/EOS 生命週期效果
+### 4.5 資安軟體（摘要）
+
+| 類別 | 代表產品（含年份）| NT$/yr | 效果 |
+|------|---------------|--------|------|
+| 端點保護 | Symantec SEP（2007）→ CrowdStrike（2013）→ Defender（2019）| 25,000–100,000 | 端點事件率 −20%–50% |
+| SIEM | ArcSight（2005）→ Splunk（2009）→ Sentinel（2020）| 100,000–1,120,000 | APT 偵測率 +30%–60% |
+| 弱點掃描 | Nessus（2002）→ Qualys（2011）→ InsightVM（2015）| 65,700–240,000 | complianceMod −0.2 |
+| NGFW | PIX（2001）→ ASA（2006）→ PA/FortiGate（2012+）| 含硬體 | 資安防護等級 Lv1–5 |
+
+### 4.6 EOL/EOS 生命週期效果
 
 ```
 EOL（End of Life）= 硬體停止銷售，進入延保階段
