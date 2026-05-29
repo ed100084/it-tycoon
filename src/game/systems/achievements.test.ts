@@ -25,6 +25,8 @@ const baseState = (): AchievementCheckState => ({
   contracts: [],
   totalContractsSigned: 0,
   totalContractRevenue: 0,
+  staff: { noc: 0, syseng: 0, secana: 0, manager: 0 },
+  totalStaffHired: 0,
   metrics: { netCPS: 0 },
 });
 
@@ -75,6 +77,8 @@ const maxedState = (): AchievementCheckState => {
     contracts: Array.from({ length: 5 }, (_, i) => makeContract(`C${i}`)),
     totalContractsSigned: 8,
     totalContractRevenue: 5_000_000,
+    staff: { noc: 10, syseng: 10, secana: 10, manager: 10 },
+    totalStaffHired: 40,
     metrics: { netCPS: 1e8 },
   };
 };

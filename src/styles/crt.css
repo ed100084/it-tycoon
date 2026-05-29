@@ -1210,6 +1210,102 @@
   padding: 3px 6px;
 }
 
+/* Staff */
+.staff-summary {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 6px;
+  font-size: 10px;
+  color: var(--tm-text-dim);
+}
+
+.staff-coverage {
+  margin-bottom: 8px;
+  font-size: 10px;
+  color: var(--tm-text-dim);
+}
+
+.staff-coverage-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 3px;
+}
+
+.staff-coverage-bar {
+  height: 5px;
+  background: var(--tm-bg-card);
+  border: 1px solid var(--tm-border);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.staff-coverage-fill {
+  height: 100%;
+  background: var(--tm-green);
+  transition: width 0.2s ease;
+}
+
+.staff-coverage-fill.low {
+  background: var(--tm-red);
+}
+
+.staff-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.staff-card {
+  background: var(--tm-bg-card);
+  border: 1px solid var(--tm-border);
+  padding: 8px 10px;
+  border-radius: 2px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.staff-card-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--tm-text);
+  font-weight: 600;
+}
+
+.staff-role-effect {
+  font-size: 10px;
+  color: var(--tm-cyan);
+}
+
+.staff-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 10px;
+  color: var(--tm-text-muted);
+}
+
+.staff-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.staff-btn.hire {
+  flex: 1;
+  font-size: 10px;
+  padding: 3px 6px;
+}
+
+.staff-btn.dismiss {
+  width: 36px;
+  font-size: 10px;
+  padding: 3px 6px;
+}
+
 /* Hardware upgrades */
 .hw-upgrades-list {
   display: flex;

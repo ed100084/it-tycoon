@@ -56,6 +56,15 @@ describe('migrateSave', () => {
     expect(migrated.totalContractRevenue).toBe(0);
   });
 
+  it('adds staff-system defaults when upgrading v2 -> v3', () => {
+    const migrated = migrateSave(asSave({ version: 2, contracts: [], totalContractRevenue: 5 }));
+    expect(migrated.version).toBe(GAME_VERSION);
+    expect(migrated.staff).toEqual({});
+    expect(migrated.totalStaffHired).toBe(0);
+    // earlier-version fields are preserved
+    expect(migrated.totalContractRevenue).toBe(5);
+  });
+
   it('runs the full v0 -> current chain on a legacy save', () => {
     const migrated = migrateSave(asSave({ compute: 10 }));
     expect(migrated.version).toBe(GAME_VERSION);
@@ -64,6 +73,9 @@ describe('migrateSave', () => {
     // v1->v2 fields
     expect(migrated.contracts).toEqual([]);
     expect(migrated.totalContractRevenue).toBe(0);
+    // v2->v3 fields
+    expect(migrated.staff).toEqual({});
+    expect(migrated.totalStaffHired).toBe(0);
   });
 });
 

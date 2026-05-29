@@ -23,13 +23,14 @@ IT-Tycoon 是一款放置類（idle/incremental）網頁遊戲。從一台老舊
 - **跨區營運**：解鎖 2 個以上區域後啟用 +25% CPS buff
 - **採購簽呈**：T4+ 硬體改為送簽流程，核准後自動交付安裝
 - **客戶合約**：接受合約佔用機櫃 U、產生持續性 CF 收入；停機會觸發 SLA 違約扣滿意度，逾時未復原則提前解約，到期完成回饋滿意度
-- **滿意度**：停機、容量壓力、簽呈堆積、合約違約會降低滿意度，穩定營運會回升
+- **員工團隊**：聘僱 4 種職能工程師——支付持續薪資（CF）、提供 coverage；營運規模超出免費額度後人力不足會扣滿意度，各職能分別降低採購/稽核摩擦、加速滿意度回復、提升合約收入
+- **滿意度**：停機、容量壓力、簽呈堆積、合約違約、人力不足會降低滿意度，穩定營運會回升
 - **稽核事件**：ISO 27001、衛福部、客戶 SLA 與 DR 演練會隨機觸發，逾期會扣滿意度
 - **Prestige Tier 1**：雲端轉型可重置本輪進度換取永久 Reputation CPS 加成
 - **Prestige Tier 2 / Influence**：累積 Reputation 可 IPO 轉換成永久 Influence，全域 CPS 每點 +5%
 - **T6/T7 Endgame 硬體**：Mega Datacenter 與 Quantum Node 進入可解鎖、採購與成就流程
 - **科技樹**：20 節點 DAG，用 Reputation 解鎖長期 CPS、電力、機櫃、採購、稽核、滿意度與 Prestige 加成
-- **成就系統**：39 個自動解鎖成就，覆蓋算力、硬體、機房、效率、採購、稽核、Prestige、Influence、科技樹與合約
+- **成就系統**：42 個自動解鎖成就，覆蓋算力、硬體、機房、效率、採購、稽核、Prestige、Influence、科技樹、合約與員工
 - **存檔 / 讀檔**：自動存 localStorage，支援離線收益
 - **CRT 終端機視覺風格**：scanline、phosphor glow、flicker 效果
 
@@ -134,6 +135,7 @@ docs/
 - [x] **v1.0** — T6/T7 + Prestige Tier 2 + Influence
 - [x] **v1.1** — 穩定化：死碼清除、real-time 遊戲迴圈、版本化存檔遷移、單元測試、UI 拆分、endgame 解鎖門檻修正
 - [x] **v1.2** — 客戶合約系統（佔用機櫃 U、持續性 CF 收入、SLA 違約壓力、合約成就）
+- [x] **v1.3** — 員工/工程師系統（薪資支出、人力 coverage 壓力、降低各系統摩擦、員工成就）
 
 完整設計規格見 [docs/spec-v1.0.md](docs/spec-v1.0.md)
 
@@ -141,7 +143,7 @@ docs/
 
 ## Claude Handoff: Recommended Next Work
 
-Current implemented milestone: **v1.2** (v1.1 stabilization + v1.2 contract system shipped).
+Current implemented milestone: **v1.3** (v1.1 stabilization + v1.2 contracts + v1.3 staff shipped).
 
 The project has accumulated the main gameplay systems from v0.3 through v1.0:
 
@@ -204,9 +206,15 @@ Still open for v1.1:
   - Possible follow-ups: per-contract reputation, renewal offers, contract-type
     tech unlocks, and dedicated SLA/uptime tooling.
 
-- **v1.3: Staff / Engineer Management**
-  - Add engineers who manage rack capacity or reduce incident/audit/procurement friction.
-  - Introduce operating cost and staffing coverage pressure.
+- **v1.3: Staff / Engineer Management** — ✅ shipped
+  - Four engineer roles, each with a salary (recurring CF drain) and a specialty
+    that reduces friction: satisfaction recovery, procurement speed, audit cost,
+    or contract income.
+  - Staffing coverage pressure: workload (hardware units + contracts) above a
+    free allowance must be covered by staff, or satisfaction erodes.
+  - Hire/dismiss actions; staff reset on prestige (lifetime hire count kept).
+  - Possible follow-ups: staff fatigue/morale, training/level-ups, role-gated
+    contract requirements, on-call rotation for incident response.
 
 - **v1.4: Security Incidents**
   - Add ransomware, DDoS, APT, and emergency response events.

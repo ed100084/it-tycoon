@@ -4,6 +4,7 @@ import { AchievementsSection } from './upgrades/AchievementsSection';
 import { TechTreeSection } from './upgrades/TechTreeSection';
 import { FacilitySection } from './upgrades/FacilitySection';
 import { ContractsSection } from './upgrades/ContractsSection';
+import { StaffSection } from './upgrades/StaffSection';
 import { AuditSection } from './upgrades/AuditSection';
 import { ProcurementSection } from './upgrades/ProcurementSection';
 import { PueSection } from './upgrades/PueSection';
@@ -17,6 +18,7 @@ export const UpgradesPanel: React.FC = () => (
     <TechTreeSection />
     <FacilitySection />
     <ContractsSection />
+    <StaffSection />
     <AuditSection />
     <ProcurementSection />
     <PueSection />

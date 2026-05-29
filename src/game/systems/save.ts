@@ -89,6 +89,13 @@ export const SAVE_MIGRATIONS: Record<number, (s: RawSave) => RawSave> = {
     totalContractRevenue: num(s.totalContractRevenue, 0),
     version: 2,
   }),
+  // v2 -> v3: introduce the staff system. Old saves have no staff.
+  2: (s) => ({
+    ...s,
+    staff: (s.staff && typeof s.staff === 'object') ? s.staff : {},
+    totalStaffHired: num(s.totalStaffHired, 0),
+    version: 3,
+  }),
 };
 
 export function migrateSave(data: SaveData): SaveData {

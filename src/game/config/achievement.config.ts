@@ -282,4 +282,25 @@ export const ACHIEVEMENT_DEFS: AchievementDefinition[] = [
     description: 'Contracts now rival raw compute as an income stream.',
     requirement: 'Earn 1,000,000 CF from contracts.',
   },
+  {
+    id: 'STAFF_FIRST',
+    name: 'First Hire',
+    category: 'staff',
+    description: 'The operation is no longer a one-person show.',
+    requirement: 'Hire your first staff member.',
+  },
+  {
+    id: 'STAFF_10',
+    name: 'Build a Team',
+    category: 'staff',
+    description: 'A real operations team is on payroll.',
+    requirement: 'Employ ten staff at once.',
+  },
+  {
+    id: 'STAFF_COVERED',
+    name: 'Fully Staffed',
+    category: 'staff',
+    description: 'Coverage keeps pace with a sizable operation.',
+    requirement: 'Fully cover a workload of 50 or more.',
+  },
 ];

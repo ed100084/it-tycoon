@@ -12,10 +12,14 @@ import { CAPACITY_WARNING_THRESHOLD } from '../../game/config/facility.config';
 import { TECH_NODE_DEFS } from '../../game/config/tech.config';
 import { ACHIEVEMENT_DEFS } from '../../game/config/achievement.config';
 import { calcContractIncomePerSecond } from '../../game/systems/contracts';
+import { calcCoverageRatio, calcStaffCoverage, calcStaffHeadcount, calcStaffSalaryPerSecond, calcWorkload } from '../../game/systems/staff';
 
 export const ResourceBar: React.FC = () => {
-  const { compute, totalEarnedCompute, metrics, isShutdown, pueLevel, satisfaction, reputation, influence, prestigeCount, techNodes, unlockedAchievements, hardware, rackCapacity, facilityRegions, procurementRequests, auditEvents, contracts } = useGameStore();
+  const { compute, totalEarnedCompute, metrics, isShutdown, pueLevel, satisfaction, reputation, influence, prestigeCount, techNodes, unlockedAchievements, hardware, rackCapacity, facilityRegions, procurementRequests, auditEvents, contracts, staff } = useGameStore();
   const contractIncome = calcContractIncomePerSecond(contracts);
+  const staffHeadcount = calcStaffHeadcount(staff);
+  const staffSalary = calcStaffSalaryPerSecond(staff);
+  const staffUnderstaffed = calcCoverageRatio(calcStaffCoverage(staff), calcWorkload(hardware, contracts)) < 1;
   const currentPue = PUE_DEFS[pueLevel]?.pue ?? 2.0;
   const usedRackUnits = calcUsedRackUnits(hardware);
   const rackUtilization = calcRackUtilization(hardware, rackCapacity);
@@ -108,6 +112,15 @@ export const ResourceBar: React.FC = () => {
         <span className="res-label">CONTRACTS</span>
         <span className={`res-value ${contracts.length > 0 ? 'glow-green' : 'glow-green-dim'}`}>
           {contracts.length}{contractIncome > 0 ? ` +${formatNumber(contractIncome)}/s` : ''}
+        </span>
+      </div>
+
+      <div className="resource-divider">║</div>
+
+      <div className="resource-item">
+        <span className="res-label">STAFF</span>
+        <span className={`res-value ${staffUnderstaffed ? 'glow-red' : staffHeadcount > 0 ? 'glow-green' : 'glow-green-dim'}`}>
+          {staffHeadcount}{staffSalary > 0 ? ` -${formatNumber(staffSalary)}/s` : ''}
         </span>
       </div>
 

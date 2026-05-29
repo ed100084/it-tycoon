@@ -13,6 +13,7 @@ const ACHIEVEMENT_CATEGORY_LABELS: Record<AchievementCategory, string> = {
   prestige: 'Prestige',
   technology: 'Technology',
   contract: 'Contract',
+  staff: 'Staff',
 };
 
 export const AchievementsSection: React.FC = () => {

@@ -82,6 +82,11 @@ export interface ActiveContract {
   totalPaid: number;            // CF earned from this contract so far
 }
 
+export type StaffRoleId = 'noc' | 'syseng' | 'secana' | 'manager';
+
+/** Headcount per staff role. */
+export type StaffState = Record<StaffRoleId, number>;
+
 export type AuditEventType = 'iso27001' | 'moh' | 'client' | 'drill';
 
 export interface AuditEvent {
@@ -106,7 +111,8 @@ export type AchievementCategory =
   | 'bureaucracy'
   | 'prestige'
   | 'technology'
-  | 'contract';
+  | 'contract'
+  | 'staff';
 
 export interface SaveData {
   version: number;
@@ -130,6 +136,8 @@ export interface SaveData {
   breachedContracts?: number;
   totalContractsSigned?: number;
   totalContractRevenue?: number;
+  staff?: Record<string, number>;
+  totalStaffHired?: number;
   satisfaction: number;
   reputation: number;
   totalEarnedReputation: number;

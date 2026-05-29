@@ -1,7 +1,8 @@
 import { ACHIEVEMENT_DEFS } from '../config/achievement.config';
 import { calcTotalRackCapacity, calcUsedRackUnits } from './facility';
+import { calcCoverageRatio, calcStaffCoverage, calcStaffHeadcount, calcWorkload } from './staff';
 import type { FacilityRegionId } from '../config/facility.config';
-import type { ActiveContract, FacilityRegionState, HardwareState, ProcurementRequest } from '../models/types';
+import type { ActiveContract, FacilityRegionState, HardwareState, ProcurementRequest, StaffState } from '../models/types';
 
 export interface AchievementCheckState {
   totalEarnedCompute: number;
@@ -20,6 +21,8 @@ export interface AchievementCheckState {
   contracts: ActiveContract[];
   totalContractsSigned: number;
   totalContractRevenue: number;
+  staff: StaffState;
+  totalStaffHired: number;
   metrics: {
     netCPS: number;
   };
@@ -69,6 +72,12 @@ const CONDITIONS: Record<string, AchievementCondition> = {
   CONTRACT_FIRST: (state) => state.totalContractsSigned >= 1,
   CONTRACT_5_ACTIVE: (state) => state.contracts.length >= 5,
   CONTRACT_REVENUE_1M: (state) => state.totalContractRevenue >= 1_000_000,
+  STAFF_FIRST: (state) => state.totalStaffHired >= 1,
+  STAFF_10: (state) => calcStaffHeadcount(state.staff) >= 10,
+  STAFF_COVERED: (state) => {
+    const workload = calcWorkload(state.hardware, state.contracts);
+    return workload >= 50 && calcCoverageRatio(calcStaffCoverage(state.staff), workload) >= 1;
+  },
 };
 
 export function evaluateAchievementUnlocks(

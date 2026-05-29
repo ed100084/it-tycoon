@@ -1,8 +1,8 @@
-export const GAME_VERSION = 2; // save data version (v2 adds the contract system)
+export const GAME_VERSION = 3; // save data version (v2 contracts, v3 staff)
 export const SAVE_KEY = 'it-tycoon-save-v1';
 
 /** Human-facing release version shown in the UI (header, footer, boot screen). */
-export const APP_VERSION = 'v1.2';
+export const APP_VERSION = 'v1.3';
 
 export const TICK_INTERVAL_MS = 100; // 10 ticks per second
 export const TICK_DELTA = TICK_INTERVAL_MS / 1000; // 0.1 seconds per tick (nominal)
