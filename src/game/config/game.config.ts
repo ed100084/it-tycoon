@@ -21,6 +21,7 @@ export const INITIAL_STATE = {
   isShutdown: false,
   satisfaction: 75,
   reputation: 0,
+  totalEarnedReputation: 0,
   influence: 0,
   prestigeCount: 0,
   gameTime: 0,

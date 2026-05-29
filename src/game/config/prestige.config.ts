@@ -1,0 +1,3 @@
+export const REPUTATION_CPS_BONUS = 0.02;
+export const INFLUENCE_CPS_BONUS = 0.05;
+export const PRESTIGE_SATISFACTION_BONUS = 10;

@@ -11,7 +11,7 @@ interface FloatingNum {
 let floatId = 0;
 
 export const ComputePanel: React.FC = () => {
-  const { compute, totalEarnedCompute, metrics, gameTime, click, isShutdown, offlineReport, dismissOfflineReport } =
+  const { compute, totalEarnedCompute, metrics, gameTime, click, isShutdown, shutdownBuffer, emergencyClicks, offlineReport, dismissOfflineReport } =
     useGameStore();
   const [floaters, setFloaters] = useState<FloatingNum[]>([]);
   const btnRef = useRef<HTMLButtonElement>(null);
@@ -85,8 +85,16 @@ export const ComputePanel: React.FC = () => {
               <>
                 <div>╔═══════════════╗</div>
                 <div>║ ⚠  SHUTDOWN   ║</div>
-                <div>║ CLICK TO BOOT ║</div>
                 <div>║  EMERGENCY    ║</div>
+                <div>║ RESTART {String(emergencyClicks).padStart(2,'0')}/10 ║</div>
+                <div>╚═══════════════╝</div>
+              </>
+            ) : shutdownBuffer > 0 ? (
+              <>
+                <div>╔═══════════════╗</div>
+                <div>║ ✓  RESTARTED  ║</div>
+                <div>║ FREE  BUFFER  ║</div>
+                <div>║  {shutdownBuffer.toFixed(1).padStart(3,' ')}s REMAIN  ║</div>
                 <div>╚═══════════════╝</div>
               </>
             ) : (
@@ -136,8 +144,13 @@ export const ComputePanel: React.FC = () => {
 
       {isShutdown && (
         <div className="shutdown-banner">
-          ⚠ POWER FAILURE — INSUFFICIENT COMPUTE TO PAY BILLS<br />
-          Click to manually generate emergency compute
+          ⚠ POWER FAILURE — Click {10 - emergencyClicks} more time{10 - emergencyClicks !== 1 ? 's' : ''} to restart<br />
+          {metrics.totalPowerCost > 0 && <>Or accumulate {formatNumber(metrics.totalPowerCost * 5)} CF (5s of bills)</>}
+        </div>
+      )}
+      {shutdownBuffer > 0 && (
+        <div className="buffer-banner">
+          ✓ EMERGENCY RESTART — Free power buffer: {shutdownBuffer.toFixed(1)}s remaining
         </div>
       )}
     </div>

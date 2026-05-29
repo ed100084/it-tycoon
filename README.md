@@ -12,13 +12,23 @@ IT-Tycoon 是一款放置類（idle/incremental）網頁遊戲。從一台老舊
 
 但別忘了：每台伺服器都要付電費，T4 以上設備需要跑採購簽呈，ISO 27001 稽核隨時可能上門，而你的老闆永遠覺得成本太高。
 
-### 核心系統（v0.2）
+### 核心系統（v1.0）
 
 - **算力（Compute）**：主貨幣，用於購買一切
 - **硬體商店**：T0 Tower PC → T5 Regional DC（成本每購買 ×1.15）
 - **電費系統**：每台設備實時耗電，餘額不足全部停機
 - **PUE 冷卻升級**：從 2.0 降至 1.6（v0.2），最終可達 1.05
 - **硬體升級**：Lv1→Lv3（v0.2），最高 Lv5（×100 CPS）
+- **機房空間**：北區 100U 容量限制，支援擴建、中區/南區解鎖
+- **跨區營運**：解鎖 2 個以上區域後啟用 +25% CPS buff
+- **採購簽呈**：T4+ 硬體改為送簽流程，核准後自動交付安裝
+- **滿意度**：停機、容量壓力、簽呈堆積會降低滿意度，穩定營運會回升
+- **稽核事件**：ISO 27001、衛福部、客戶 SLA 與 DR 演練會隨機觸發，逾期會扣滿意度
+- **Prestige Tier 1**：雲端轉型可重置本輪進度換取永久 Reputation CPS 加成
+- **Prestige Tier 2 / Influence**：累積 Reputation 可 IPO 轉換成永久 Influence，全域 CPS 每點 +5%
+- **T6/T7 Endgame 硬體**：Mega Datacenter 與 Quantum Node 進入可解鎖、採購與成就流程
+- **科技樹**：20 節點 DAG，用 Reputation 解鎖長期 CPS、電力、機櫃、採購、稽核、滿意度與 Prestige 加成
+- **成就系統**：35 個自動解鎖成就，覆蓋算力、硬體、機房、效率、採購、稽核、Prestige、Influence 與科技樹
 - **存檔 / 讀檔**：自動存 localStorage，支援離線收益
 - **CRT 終端機視覺風格**：scanline、phosphor glow、flicker 效果
 
@@ -28,7 +38,7 @@ IT-Tycoon 是一款放置類（idle/incremental）網頁遊戲。從一台老舊
 
 | 項目 | 技術 |
 |------|------|
-| UI 框架 | React 18 + TypeScript |
+| UI 框架 | React 19 + TypeScript |
 | 打包工具 | Vite 8 |
 | 狀態管理 | Zustand |
 | 樣式 | Pure CSS（CRT terminal style） |
@@ -77,7 +87,7 @@ docs/
 
 ---
 
-## 遊戲數值（v0.2）
+## 遊戲數值（v1.0）
 
 ### 硬體效能（PUE 2.0）
 
@@ -87,8 +97,10 @@ docs/
 | T1 Rack Server | +2.00 | −0.30 | **+1.70** |
 | T2 Blade Server | +20.00 | −0.70 | **+19.30** |
 | T3 Server Farm | +200.00 | −2.40 | **+197.60** |
-| T4 Mini DC | +2,000 | −8.00 | **+1,992** |
-| T5 Regional DC | +20,000 | −30.00 | **+19,970** |
+| T4 Mini DC | +2,000 | -8.00 | **+1,992** |
+| T5 Regional DC | +20,000 | -30.00 | **+19,970** |
+| T6 Mega Datacenter | +200,000 | -160.00 | **+199,840** |
+| T7 Quantum Node | +10,000,000 | -600.00 | **+9,999,400** |
 
 ### PUE 升級（v0.2 開放前 3 級）
 
@@ -103,16 +115,91 @@ docs/
 ## 開發路線圖
 
 - [x] **v0.2** — 核心機制：點擊、硬體、電費、PUE、存檔、離線、boot 動畫
-- [ ] **v0.3** — 機房空間（北區 100U）
-- [ ] **v0.4** — 中南區 + 跨區 buff (+25%)
-- [ ] **v0.5** — 採購簽呈系統 + 滿意度
-- [ ] **v0.6** — 稽核事件（ISO/衛福部/客戶突襲）
-- [ ] **v0.7** — Prestige Tier 1 + Reputation
-- [ ] **v0.8** — 科技樹（DAG，20 節點）
-- [ ] **v0.9** — 成就系統（30 個）
-- [ ] **v1.0** — T6/T7 + Prestige Tier 2 + Influence
+- [x] **v0.3** — 機房空間（北區 100U）
+- [x] **v0.4** — 中南區 + 跨區 buff (+25%)
+- [x] **v0.5** — 採購簽呈系統 + 滿意度
+- [x] **v0.6** — 稽核事件（ISO/衛福部/客戶突襲）
+- [x] **v0.7** — Prestige Tier 1 + Reputation
+- [x] **v0.8** — 科技樹（DAG，20 節點）
+- [x] **v0.9** — 成就系統（30 個）
+- [x] **v1.0** — T6/T7 + Prestige Tier 2 + Influence
 
 完整設計規格見 [docs/spec-v1.0.md](docs/spec-v1.0.md)
+
+---
+
+## Claude Handoff: Recommended Next Work
+
+Current implemented milestone: **v1.0**.
+
+The project has accumulated the main gameplay systems from v0.3 through v1.0:
+
+- Facility/rack capacity and regional expansion
+- Procurement workflow for T4+ hardware
+- Satisfaction pressure from shutdowns, capacity, and pending PRs
+- Audit events
+- Prestige Tier 1 with Reputation
+- Tech tree
+- Achievements
+- Prestige Tier 2 with Influence
+- T6/T7 endgame hardware
+
+### Recommended v1.1: Stabilization and Polish
+
+Do this before adding another large gameplay system.
+
+Priority items:
+
+1. **Fix text encoding and UI copy**
+   - Many README and UI strings currently show mojibake/garbled text.
+   - Normalize visible copy to Traditional Chinese or clear English.
+   - Start with README, hardware descriptions, headers, button labels, boot text, and footer warnings.
+
+2. **Balance the progression curve**
+   - Re-check T0 to T7 cost/CPS/power/rack pacing.
+   - Verify Prestige Tier 1 does not arrive too early or too late.
+   - Verify Prestige Tier 2 Influence does not explode CPS too quickly.
+   - Check interaction between cross-region bonus, Reputation, Influence, tech tree, PUE, and procurement speed.
+
+3. **Formalize save migrations**
+   - v1.0 added `totalEarnedReputation`.
+   - Bump save schema version when needed.
+   - Add migration defaults for old saves instead of relying on scattered fallback logic.
+
+4. **Visual QA**
+   - Verify the three-column UI at desktop and smaller widths.
+   - Check Achievements, Tech Tree, Prestige, Procurement, Audit, and Hardware panels for overflow.
+   - Confirm long text does not overlap or push buttons out of bounds.
+
+5. **Light automated tests**
+   - Add unit tests for prestige formulas, achievement unlocks, rack capacity, procurement delivery, and save migration.
+   - These systems now depend on each other enough that regression tests are worth it.
+
+### Recommended Feature Roadmap After v1.1
+
+- **v1.2: Contract / Customer System**
+  - Add customer contracts that consume capacity and generate recurring revenue.
+  - Contract SLA pressure should connect naturally to audits and satisfaction.
+  - This is the strongest next gameplay loop: hardware capacity -> contracts -> risk/pressure -> revenue -> expansion.
+
+- **v1.3: Staff / Engineer Management**
+  - Add engineers who manage rack capacity or reduce incident/audit/procurement friction.
+  - Introduce operating cost and staffing coverage pressure.
+
+- **v1.4: Security Incidents**
+  - Add ransomware, DDoS, APT, and emergency response events.
+  - Tie incident response to satisfaction, audits, tech tree, and future staff.
+
+- **v1.5: Achievement Rewards and Stats Page**
+  - Achievements currently unlock as milestones only.
+  - Add small rewards or passive bonuses.
+  - Add a dedicated stats/history page for total compute, uptime, audits, prestige runs, and unlocked systems.
+
+### Suggested First Task for Claude
+
+Start with **v1.1 text cleanup + save migration audit**.
+
+This is the best handoff point because the current game is feature-rich but still needs stability, readable copy, and a defensible progression curve before adding more systems.
 
 ---
 

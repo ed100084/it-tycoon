@@ -18,7 +18,7 @@ export function serializeSave(state: SaveData): string {
 export function deserializeSave(raw: string): SaveData | null {
   try {
     const data = JSON.parse(raw) as SaveData;
-    if (typeof data !== 'object' || !data.version) return null;
+    if (!data || typeof data !== 'object' || !data.version) return null;
     return data;
   } catch {
     return null;
@@ -56,16 +56,18 @@ export function calcOfflineEarnings(
   hardware: Record<string, HardwareState>,
   pueLevel: number,
   lastSaveTime: number,
-  isShutdown: boolean
+  isShutdown: boolean,
+  cpsMultiplier = 1,
+  powerCostMultiplier = 1
 ): OfflineEarningsReport {
   const now = Date.now();
-  const elapsed = Math.min((now - lastSaveTime) / 1000, MAX_OFFLINE_SECONDS);
+  const elapsed = Math.max(0, Math.min((now - lastSaveTime) / 1000, MAX_OFFLINE_SECONDS));
 
   if (isShutdown || elapsed < 5) {
     return { elapsed, earnings: 0, wasShutdown: isShutdown };
   }
 
-  const metrics = computeTickMetrics(hardware, pueLevel);
+  const metrics = computeTickMetrics(hardware, pueLevel, cpsMultiplier, powerCostMultiplier);
   const earnings = Math.max(0, metrics.netCPS * elapsed);
 
   return { elapsed, earnings, wasShutdown: false };

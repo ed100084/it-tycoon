@@ -32,6 +32,24 @@ export interface HardwareState {
   upgradeLevel: number; // 1-5
 }
 
+export interface FacilityRegionState {
+  unlocked: boolean;
+  capacity: number;
+  expansionCount: number;
+}
+
+export type ProcurementStatus = 'pending' | 'ready' | 'blocked' | 'delivered';
+
+export interface ProcurementRequest {
+  id: string;
+  tierId: string;
+  qty: number;
+  cost: number;
+  submittedAt: number;
+  readyAt: number;
+  status: ProcurementStatus;
+}
+
 export interface ZoneState {
   id: string;
   name: string;
@@ -42,14 +60,19 @@ export interface ZoneState {
   powerMultiplier: number;
 }
 
+export type AuditEventType = 'iso27001' | 'moh' | 'client' | 'drill';
+
 export interface AuditEvent {
   id: string;
-  type: 'iso27001' | 'moh' | 'client' | 'drill';
+  type: AuditEventType;
   title: string;
   description: string;
   timeLimit: number;
   active: boolean;
   startedAt: number;
+  responseCost: number;
+  satisfactionPenalty: number;
+  satisfactionReward: number;
 }
 
 export interface TechNode {
@@ -63,12 +86,21 @@ export interface TechNode {
   unlocked: boolean;
 }
 
+export type AchievementCategory =
+  | 'milestone'
+  | 'hardware'
+  | 'audit'
+  | 'efficiency'
+  | 'expansion'
+  | 'bureaucracy'
+  | 'prestige'
+  | 'technology';
+
 export interface Achievement {
   id: string;
   name: string;
   description: string;
-  category: 'milestone' | 'hardware' | 'audit' | 'efficiency' | 'expansion' | 'bureaucracy';
-  condition: (state: SaveData) => boolean;
+  category: AchievementCategory;
   unlocked: boolean;
 }
 
@@ -79,8 +111,17 @@ export interface SaveData {
   hardware: Record<string, HardwareState>;
   pueLevel: number;
   isShutdown: boolean;
+  emergencyClicks?: number;
+  rackCapacity?: number;
+  facilityRegions?: Record<string, FacilityRegionState>;
+  procurementRequests?: ProcurementRequest[];
+  auditEvents?: AuditEvent[];
+  nextAuditAt?: number;
+  resolvedAudits?: number;
+  failedAudits?: number;
   satisfaction: number;
   reputation: number;
+  totalEarnedReputation: number;
   influence: number;
   prestigeCount: number;
   lastSaveTime: number;

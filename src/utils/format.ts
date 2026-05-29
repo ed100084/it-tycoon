@@ -3,7 +3,7 @@ const SUFFIXES = ['', 'K', 'M', 'B', 'T', 'Qa', 'Qi', 'Sx', 'Sp', 'Oc', 'No', 'D
 export function formatNumber(n: number, decimals = 2): string {
   if (!isFinite(n) || isNaN(n)) return '0';
   if (n < 0) return '-' + formatNumber(-n, decimals);
-  if (n < 1000) return n.toFixed(decimals === 2 ? 1 : decimals);
+  if (n < 1000) return n.toFixed(decimals);
 
   let i = 0;
   let v = n;

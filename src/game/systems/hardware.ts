@@ -2,6 +2,8 @@ import { HARDWARE_DEFS, COST_GROWTH, UPGRADE_LEVELS } from '../config/hardware.c
 import { PUE_DEFS, ELECTRICITY_PRICE } from '../config/pue.config';
 import type { HardwareState } from '../models/types';
 
+const KNOWN_HARDWARE_IDS = new Set(HARDWARE_DEFS.map((d) => d.id));
+
 export function getHardwareDef(id: string) {
   const def = HARDWARE_DEFS.find((d) => d.id === id);
   if (!def) throw new Error(`Unknown hardware: ${id}`);
@@ -53,17 +55,20 @@ export interface GameTickMetrics {
 
 export function computeTickMetrics(
   hardware: Record<string, HardwareState>,
-  pueLevel: number
+  pueLevel: number,
+  cpsMultiplier = 1,
+  powerCostMultiplier = 1
 ): GameTickMetrics {
-  const pue = PUE_DEFS[pueLevel].pue;
+  const pue = PUE_DEFS[pueLevel]?.pue ?? PUE_DEFS[0].pue;
   let totalCPS = 0;
   let totalPowerCost = 0;
   const perHardware: Record<string, { cps: number; power: number }> = {};
 
   for (const [id, hw] of Object.entries(hardware)) {
+    if (!KNOWN_HARDWARE_IDS.has(id)) continue;
     if (hw.owned === 0) continue;
-    const cps = calcHardwareCPS(id, hw);
-    const power = calcHardwarePower(id, hw, pue);
+    const cps = calcHardwareCPS(id, hw) * cpsMultiplier;
+    const power = calcHardwarePower(id, hw, pue) * powerCostMultiplier;
     totalCPS += cps;
     totalPowerCost += power;
     perHardware[id] = { cps, power };

@@ -4,7 +4,7 @@ import { ResourceBar } from './hud/ResourceBar';
 import { ComputePanel } from './panels/ComputePanel';
 import { HardwarePanel } from './panels/HardwarePanel';
 import { UpgradesPanel } from './panels/UpgradesPanel';
-import { TICK_DELTA, AUTO_SAVE_INTERVAL_MS } from '../game/config/game.config';
+import { TICK_DELTA, AUTO_SAVE_INTERVAL_MS, SAVE_KEY } from '../game/config/game.config';
 import { formatTime } from '../utils/format';
 
 export const GameLayout: React.FC = () => {
@@ -60,7 +60,7 @@ export const GameLayout: React.FC = () => {
   const handleNewGame = () => {
     if (confirm('⚠ Start a new game? All progress will be lost.')) {
       useGameStore.getState().newGame();
-      localStorage.removeItem('it-tycoon-save-v1');
+      localStorage.removeItem(SAVE_KEY);
     }
   };
 
@@ -69,16 +69,16 @@ export const GameLayout: React.FC = () => {
       {/* Header */}
       <header className="game-header">
         <div className="header-left">
-          <span className="game-title glow-green">IT-TYCOON</span>
-          <span className="game-version glow-green-dim">v0.2</span>
+          <span className="game-title">IT-TYCOON</span>
+          <span className="game-version">v1.0</span>
         </div>
         <div className="header-center">
-          <span className="header-tagline glow-green-dim">
+          <span className="header-tagline">
             ▸ 雲端服務商擴張模擬 · 官僚現實版 ◂
           </span>
         </div>
         <div className="header-right">
-          <span ref={clockRef} className="header-clock glow-green-dim">
+          <span ref={clockRef} className="header-clock">
             {formatTime(Date.now())}
           </span>
           <button className="crt-btn btn-save" onClick={handleSave}>
@@ -102,11 +102,11 @@ export const GameLayout: React.FC = () => {
 
       {/* Footer */}
       <footer className="game-footer">
-        <span className="footer-text glow-green-dim">
-          IT-TYCOON v0.2 · React 18 + TypeScript + Zustand ·
+        <span className="footer-text">
+          IT-TYCOON v1.0 · React 19 + TypeScript + Zustand ·
           Auto-save every 30s · Data persisted in localStorage
         </span>
-        <span className="footer-warn glow-yellow">
+        <span className="footer-warn">
           ⚠ Remember: All T4+ purchases require a signed 採購申請書
         </span>
       </footer>

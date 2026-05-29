@@ -6,13 +6,21 @@ import {
   calcBulkCost,
   getMaxAffordable,
 } from '../../game/systems/hardware';
+import {
+  calcFreeRackUnits,
+  calcMaxInstallableByRack,
+} from '../../game/systems/facility';
+import { calcProcurementRackUnits, requiresProcurement } from '../../game/systems/procurement';
 import { formatNumber, formatCPS } from '../../utils/format';
 
 type BuyMode = 1 | 10 | 100 | 'max';
 
 export const HardwarePanel: React.FC = () => {
-  const { compute, hardware, metrics, buyHardware } = useGameStore();
+  const { compute, hardware, metrics, rackCapacity, procurementRequests, buyHardware } = useGameStore();
   const [buyMode, setBuyMode] = useState<BuyMode>(1);
+  const reservedRackUnits = calcProcurementRackUnits(procurementRequests);
+  const freeRackUnits = Math.max(0, calcFreeRackUnits(hardware, rackCapacity) - reservedRackUnits);
+  const effectiveRackCapacity = rackCapacity - reservedRackUnits;
 
   const handleBuy = (tierId: string, qty: number) => {
     if (qty <= 0) return;
@@ -21,7 +29,12 @@ export const HardwarePanel: React.FC = () => {
 
   const getQty = (tierId: string): number => {
     const hw = hardware[tierId];
-    if (buyMode === 'max') return getMaxAffordable(tierId, hw?.owned ?? 0, compute);
+    if (buyMode === 'max') {
+      return Math.min(
+        getMaxAffordable(tierId, hw?.owned ?? 0, compute),
+        calcMaxInstallableByRack(tierId, hardware, effectiveRackCapacity)
+      );
+    }
     return buyMode;
   };
 
@@ -34,11 +47,12 @@ export const HardwarePanel: React.FC = () => {
       : calcBulkCost(tierId, hw?.owned ?? 0, qty);
   };
 
-  // Unlock gate: show hardware only if player has at least 1 of the previous tier
+  // Unlock gate: show hardware only if player owns >= unlockAt of the previous tier
   const isVisible = (tier: number): boolean => {
     if (tier === 0) return true;
     const prevTier = HARDWARE_DEFS[tier - 1];
-    return (hardware[prevTier.id]?.owned ?? 0) >= 1;
+    const def = HARDWARE_DEFS[tier];
+    return (hardware[prevTier.id]?.owned ?? 0) >= def.unlockAt;
   };
 
   return (
@@ -63,7 +77,12 @@ export const HardwarePanel: React.FC = () => {
           const hw = hardware[def.id] ?? { owned: 0, upgradeLevel: 1 };
           const qty = getQty(def.id);
           const cost = getCost(def.id);
+          const requiredRackUnits = def.uSize * qty;
+          const maxByRack = calcMaxInstallableByRack(def.id, hardware, effectiveRackCapacity);
+          const hasSpace = qty > 0 && requiredRackUnits <= freeRackUnits;
+          const blockedByRack = qty > 0 ? requiredRackUnits > freeRackUnits : maxByRack <= 0;
           const canAfford = compute >= cost;
+          const procurementRequired = requiresProcurement(def.id);
           const hwMetrics = metrics.perHardware[def.id];
           const upgradeInfo = UPGRADE_LEVELS[hw.upgradeLevel - 1];
 
@@ -80,6 +99,9 @@ export const HardwarePanel: React.FC = () => {
                 {hw.upgradeLevel > 1 && (
                   <div className="hw-upgrade-badge">Lv{hw.upgradeLevel}</div>
                 )}
+                {procurementRequired && (
+                  <div className="hw-procurement-badge">PR</div>
+                )}
               </div>
 
               {/* Stats row */}
@@ -91,6 +113,9 @@ export const HardwarePanel: React.FC = () => {
                 <span className="hw-stat power">
                   <span className="stat-icon">⚡</span>
                   {formatNumber(def.watts * hw.owned)} W
+                </span>
+                <span className={`hw-stat rack ${requiredRackUnits > freeRackUnits ? 'capacity-blocked' : ''}`}>
+                  {hw.owned > 0 ? `${def.uSize * hw.owned}U used` : `${def.uSize}U / unit`}
                 </span>
                 {hwMetrics && (
                   <span className="hw-stat net">
@@ -109,17 +134,26 @@ export const HardwarePanel: React.FC = () => {
               {/* Buy button */}
               <div className="hw-buy-row">
                 <button
-                  className={`crt-btn hw-buy-btn ${canAfford && qty > 0 ? '' : 'disabled'}`}
+                  className={`crt-btn hw-buy-btn ${canAfford && hasSpace ? '' : 'disabled'}`}
                   onClick={() => handleBuy(def.id, qty)}
-                  disabled={!canAfford || qty <= 0}
+                  disabled={!canAfford || !hasSpace}
                 >
-                  {buyMode === 'max' && qty === 0
+                  {blockedByRack
+                    ? '[ NO RACK SPACE ]'
+                    : buyMode === 'max' && qty === 0
                     ? '[ INSUFFICIENT ]'
-                    : `[ BUY ×${buyMode === 'max' ? qty : buyMode} ]`}
+                    : procurementRequired
+                      ? `[ SUBMIT PR ×${buyMode === 'max' ? qty : buyMode} ]`
+                      : `[ BUY ×${buyMode === 'max' ? qty : buyMode} ]`}
                 </button>
-                <span className={`hw-cost ${canAfford && qty > 0 ? 'glow-green' : 'glow-red'}`}>
+                <span className={`hw-cost ${canAfford && hasSpace ? 'glow-green' : 'glow-red'}`}>
                   {qty === 0 ? '---' : formatNumber(cost) + ' CF'}
                 </span>
+              </div>
+
+              <div className={`hw-capacity ${hasSpace ? '' : 'capacity-blocked'}`}>
+                Rack need: {requiredRackUnits}U · Free: {freeRackUnits}U
+                {reservedRackUnits > 0 && ` · Reserved PR: ${reservedRackUnits}U`}
               </div>
 
               {/* Description (tooltip on hover via title) */}
