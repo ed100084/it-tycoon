@@ -1,8 +1,15 @@
-export const GAME_VERSION = 1; // save data version
+export const GAME_VERSION = 2; // save data version (v2 adds the contract system)
 export const SAVE_KEY = 'it-tycoon-save-v1';
 
+/** Human-facing release version shown in the UI (header, footer, boot screen). */
+export const APP_VERSION = 'v1.2';
+
 export const TICK_INTERVAL_MS = 100; // 10 ticks per second
-export const TICK_DELTA = TICK_INTERVAL_MS / 1000; // 0.1 seconds per tick
+export const TICK_DELTA = TICK_INTERVAL_MS / 1000; // 0.1 seconds per tick (nominal)
+// Largest dt a single tick will advance the simulation by. Caps the catch-up
+// jump when the tab was backgrounded and setInterval was throttled; longer gaps
+// are handled by the offline-earnings path on reload instead.
+export const MAX_TICK_DELTA = 2; // seconds
 
 export const AUTO_SAVE_INTERVAL_MS = 30000; // auto-save every 30 seconds
 

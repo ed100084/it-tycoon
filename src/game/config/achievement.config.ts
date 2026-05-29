@@ -261,4 +261,25 @@ export const ACHIEVEMENT_DEFS: AchievementDefinition[] = [
     description: 'Every v0.8 technology path is complete.',
     requirement: 'Unlock all twenty technologies.',
   },
+  {
+    id: 'CONTRACT_FIRST',
+    name: 'First Customer Signed',
+    category: 'contract',
+    description: 'Recurring revenue is finally on the books.',
+    requirement: 'Sign your first customer contract.',
+  },
+  {
+    id: 'CONTRACT_5_ACTIVE',
+    name: 'Service Provider',
+    category: 'contract',
+    description: 'A real service portfolio runs across your racks.',
+    requirement: 'Run five active contracts at once.',
+  },
+  {
+    id: 'CONTRACT_REVENUE_1M',
+    name: 'Managed Services Revenue',
+    category: 'contract',
+    description: 'Contracts now rival raw compute as an income stream.',
+    requirement: 'Earn 1,000,000 CF from contracts.',
+  },
 ];

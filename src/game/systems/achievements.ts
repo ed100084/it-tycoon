@@ -1,7 +1,7 @@
 import { ACHIEVEMENT_DEFS } from '../config/achievement.config';
 import { calcTotalRackCapacity, calcUsedRackUnits } from './facility';
 import type { FacilityRegionId } from '../config/facility.config';
-import type { FacilityRegionState, HardwareState, ProcurementRequest } from '../models/types';
+import type { ActiveContract, FacilityRegionState, HardwareState, ProcurementRequest } from '../models/types';
 
 export interface AchievementCheckState {
   totalEarnedCompute: number;
@@ -17,6 +17,9 @@ export interface AchievementCheckState {
   prestigeCount: number;
   resolvedAudits: number;
   techNodes: string[];
+  contracts: ActiveContract[];
+  totalContractsSigned: number;
+  totalContractRevenue: number;
   metrics: {
     netCPS: number;
   };
@@ -63,6 +66,9 @@ const CONDITIONS: Record<string, AchievementCondition> = {
   TECH_5: (state) => state.techNodes.length >= 5,
   TECH_10: (state) => state.techNodes.length >= 10,
   TECH_20: (state) => state.techNodes.length >= 20,
+  CONTRACT_FIRST: (state) => state.totalContractsSigned >= 1,
+  CONTRACT_5_ACTIVE: (state) => state.contracts.length >= 5,
+  CONTRACT_REVENUE_1M: (state) => state.totalContractRevenue >= 1_000_000,
 };
 
 export function evaluateAchievementUnlocks(

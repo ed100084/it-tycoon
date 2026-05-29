@@ -22,13 +22,14 @@ IT-Tycoon 是一款放置類（idle/incremental）網頁遊戲。從一台老舊
 - **機房空間**：北區 100U 容量限制，支援擴建、中區/南區解鎖
 - **跨區營運**：解鎖 2 個以上區域後啟用 +25% CPS buff
 - **採購簽呈**：T4+ 硬體改為送簽流程，核准後自動交付安裝
-- **滿意度**：停機、容量壓力、簽呈堆積會降低滿意度，穩定營運會回升
+- **客戶合約**：接受合約佔用機櫃 U、產生持續性 CF 收入；停機會觸發 SLA 違約扣滿意度，逾時未復原則提前解約，到期完成回饋滿意度
+- **滿意度**：停機、容量壓力、簽呈堆積、合約違約會降低滿意度，穩定營運會回升
 - **稽核事件**：ISO 27001、衛福部、客戶 SLA 與 DR 演練會隨機觸發，逾期會扣滿意度
 - **Prestige Tier 1**：雲端轉型可重置本輪進度換取永久 Reputation CPS 加成
 - **Prestige Tier 2 / Influence**：累積 Reputation 可 IPO 轉換成永久 Influence，全域 CPS 每點 +5%
 - **T6/T7 Endgame 硬體**：Mega Datacenter 與 Quantum Node 進入可解鎖、採購與成就流程
 - **科技樹**：20 節點 DAG，用 Reputation 解鎖長期 CPS、電力、機櫃、採購、稽核、滿意度與 Prestige 加成
-- **成就系統**：35 個自動解鎖成就，覆蓋算力、硬體、機房、效率、採購、稽核、Prestige、Influence 與科技樹
+- **成就系統**：39 個自動解鎖成就，覆蓋算力、硬體、機房、效率、採購、稽核、Prestige、Influence、科技樹與合約
 - **存檔 / 讀檔**：自動存 localStorage，支援離線收益
 - **CRT 終端機視覺風格**：scanline、phosphor glow、flicker 效果
 
@@ -42,7 +43,8 @@ IT-Tycoon 是一款放置類（idle/incremental）網頁遊戲。從一台老舊
 | 打包工具 | Vite 8 |
 | 狀態管理 | Zustand |
 | 樣式 | Pure CSS（CRT terminal style） |
-| 資料持久化 | localStorage |
+| 資料持久化 | localStorage（版本化存檔 + 遷移鏈） |
+| 測試 | Vitest（核心系統純函式單元測試） |
 
 ---
 
@@ -57,6 +59,9 @@ npm run dev
 
 # 生產打包
 npm run build
+
+# 執行單元測試
+npm test
 ```
 
 ---
@@ -66,23 +71,27 @@ npm run build
 ```
 src/
 ├── game/
-│   ├── config/          # 數值配置（硬體表、PUE 表、遊戲常數）
+│   ├── config/          # 數值配置（硬體表、PUE 表、科技樹、成就、遊戲常數）
 │   ├── models/          # TypeScript 型別定義
-│   └── systems/         # 子系統邏輯（hardware、power、save）
+│   └── systems/         # 子系統純函式 + *.test.ts 單元測試
+│                        #   hardware / facility / procurement / audit
+│                        #   prestige / tech / achievements / save
 ├── store/
-│   └── gameStore.ts     # Zustand 全域狀態
+│   └── gameStore.ts     # Zustand 全域狀態 + 遊戲迴圈邏輯
 ├── components/
 │   ├── BootSequence.tsx # 開機動畫
-│   ├── GameLayout.tsx   # 主佈局 + 遊戲迴圈
+│   ├── GameLayout.tsx   # 主佈局 + 遊戲迴圈（real-elapsed dt）
 │   ├── hud/             # ResourceBar
 │   └── panels/          # ComputePanel、HardwarePanel、UpgradesPanel
+│       └── upgrades/    # UpgradesPanel 拆分出的各區塊子元件
 ├── styles/
 │   ├── global.css       # 基礎樣式 + CSS 變數
 │   └── crt.css          # CRT 效果 + 所有元件樣式
 └── utils/
     └── format.ts        # 數字格式化（K/M/B/T...）
 docs/
-└── spec-v1.0.md         # 完整設計規格書
+├── spec-v1.0.md         # 完整設計規格書（另有 v2.0 / v3.0 設計探索）
+└── modules/             # 各子系統的模組化規格
 ```
 
 ---
@@ -121,8 +130,10 @@ docs/
 - [x] **v0.6** — 稽核事件（ISO/衛福部/客戶突襲）
 - [x] **v0.7** — Prestige Tier 1 + Reputation
 - [x] **v0.8** — 科技樹（DAG，20 節點）
-- [x] **v0.9** — 成就系統（30 個）
+- [x] **v0.9** — 成就系統（現為 39 個）
 - [x] **v1.0** — T6/T7 + Prestige Tier 2 + Influence
+- [x] **v1.1** — 穩定化：死碼清除、real-time 遊戲迴圈、版本化存檔遷移、單元測試、UI 拆分、endgame 解鎖門檻修正
+- [x] **v1.2** — 客戶合約系統（佔用機櫃 U、持續性 CF 收入、SLA 違約壓力、合約成就）
 
 完整設計規格見 [docs/spec-v1.0.md](docs/spec-v1.0.md)
 
@@ -130,7 +141,7 @@ docs/
 
 ## Claude Handoff: Recommended Next Work
 
-Current implemented milestone: **v1.0**.
+Current implemented milestone: **v1.2** (v1.1 stabilization + v1.2 contract system shipped).
 
 The project has accumulated the main gameplay systems from v0.3 through v1.0:
 
@@ -144,43 +155,54 @@ The project has accumulated the main gameplay systems from v0.3 through v1.0:
 - Prestige Tier 2 with Influence
 - T6/T7 endgame hardware
 
-### Recommended v1.1: Stabilization and Polish
+### v1.1: Stabilization and Polish
 
-Do this before adding another large gameplay system.
+Stabilization work already landed:
 
-Priority items:
+- [x] **Removed dead code** — unused `Achievement` / `TechNode` / `ZoneState`
+      interfaces deleted from `models/types.ts`.
+- [x] **Game loop uses real elapsed time** — `GameLayout` advances the
+      simulation by wall-clock dt (capped by `MAX_TICK_DELTA`) so background-tab
+      throttling no longer slows progress.
+- [x] **Formalized save migration** — `migrateSave` is now a version-aware
+      migration chain (`SAVE_MIGRATIONS`); legacy pre-versioned saves are
+      accepted and upgraded instead of discarded.
+- [x] **Unit tests** — Vitest coverage for hardware, facility, prestige,
+      achievements, and save/migration pure functions (`npm test`).
+- [x] **UI refactor** — the 500-line `UpgradesPanel` was split into focused
+      section components under `components/panels/upgrades/`.
+- [x] **Reachable endgame** — T6/T7 unlock gates were retuned (own 50x T5 / 100x
+      T6 → 12x / 8x) so the Mega Datacenter and Quantum Node are actually
+      attainable in a single run. A `hardware.balance.test.ts` invariant now
+      guards that every unlock gate is reachable in both rack space and cost
+      before the first prestige.
 
-1. **Fix text encoding and UI copy**
-   - Many README and UI strings currently show mojibake/garbled text.
-   - Normalize visible copy to Traditional Chinese or clear English.
-   - Start with README, hardware descriptions, headers, button labels, boot text, and footer warnings.
+Still open for v1.1:
 
-2. **Balance the progression curve**
-   - Re-check T0 to T7 cost/CPS/power/rack pacing.
-   - Verify Prestige Tier 1 does not arrive too early or too late.
+1. **Finish balancing the progression curve**
+   - T6/T7 unlock gates are fixed; still re-check T0–T5 cost/CPS/power/rack pacing.
+   - Verify Prestige Tier 1 does not arrive too early or too late (note the
+     first prestige currently grants only +2% CPS, though the reputation also
+     buys tech-tree nodes).
    - Verify Prestige Tier 2 Influence does not explode CPS too quickly.
    - Check interaction between cross-region bonus, Reputation, Influence, tech tree, PUE, and procurement speed.
 
-3. **Formalize save migrations**
-   - v1.0 added `totalEarnedReputation`.
-   - Bump save schema version when needed.
-   - Add migration defaults for old saves instead of relying on scattered fallback logic.
-
-4. **Visual QA**
+2. **Visual QA**
    - Verify the three-column UI at desktop and smaller widths.
    - Check Achievements, Tech Tree, Prestige, Procurement, Audit, and Hardware panels for overflow.
    - Confirm long text does not overlap or push buttons out of bounds.
 
-5. **Light automated tests**
-   - Add unit tests for prestige formulas, achievement unlocks, rack capacity, procurement delivery, and save migration.
-   - These systems now depend on each other enough that regression tests are worth it.
-
 ### Recommended Feature Roadmap After v1.1
 
-- **v1.2: Contract / Customer System**
-  - Add customer contracts that consume capacity and generate recurring revenue.
-  - Contract SLA pressure should connect naturally to audits and satisfaction.
-  - This is the strongest next gameplay loop: hardware capacity -> contracts -> risk/pressure -> revenue -> expansion.
+- **v1.2: Contract / Customer System** — ✅ shipped
+  - Customer contracts reserve rack U and generate recurring CF income.
+  - Offers arrive periodically (scaled to progress); accepting reserves capacity
+    and pays a signing bonus, then steady CF/s while online.
+  - SLA pressure ties to uptime: shutdowns accrue downtime and satisfaction
+    penalties, and a contract that stays down past the breach cap terminates
+    early; completing a contract returns a satisfaction reward.
+  - Possible follow-ups: per-contract reputation, renewal offers, contract-type
+    tech unlocks, and dedicated SLA/uptime tooling.
 
 - **v1.3: Staff / Engineer Management**
   - Add engineers who manage rack capacity or reduce incident/audit/procurement friction.
@@ -197,9 +219,10 @@ Priority items:
 
 ### Suggested First Task for Claude
 
-Start with **v1.1 text cleanup + save migration audit**.
-
-This is the best handoff point because the current game is feature-rich but still needs stability, readable copy, and a defensible progression curve before adding more systems.
+The v1.1 stabilization groundwork (dead-code cleanup, real-time game loop,
+versioned save migration, unit tests, UI refactor) is done. The best next step
+is **balancing the T0–T7 progression curve and prestige pacing**, backed by the
+new test suite, before starting the v1.2 contract system.
 
 ---
 

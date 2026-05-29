@@ -4,20 +4,27 @@ import { ResourceBar } from './hud/ResourceBar';
 import { ComputePanel } from './panels/ComputePanel';
 import { HardwarePanel } from './panels/HardwarePanel';
 import { UpgradesPanel } from './panels/UpgradesPanel';
-import { TICK_DELTA, AUTO_SAVE_INTERVAL_MS, SAVE_KEY } from '../game/config/game.config';
+import { TICK_INTERVAL_MS, MAX_TICK_DELTA, AUTO_SAVE_INTERVAL_MS, SAVE_KEY, APP_VERSION } from '../game/config/game.config';
 import { formatTime } from '../utils/format';
 
 export const GameLayout: React.FC = () => {
   const { tick, saveGame } = useGameStore();
   const tickRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const saveRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const lastTickAtRef = useRef<number>(Date.now());
   const clockRef = useRef<HTMLSpanElement>(null);
 
-  // Game loop
+  // Game loop — advance by real elapsed time so background-tab throttling does
+  // not slow the simulation down. The per-tick delta is capped (MAX_TICK_DELTA)
+  // so a long throttled gap produces one bounded catch-up tick rather than a spike.
   useEffect(() => {
+    lastTickAtRef.current = Date.now();
     tickRef.current = setInterval(() => {
-      tick(TICK_DELTA);
-    }, 100);
+      const now = Date.now();
+      const dt = Math.min((now - lastTickAtRef.current) / 1000, MAX_TICK_DELTA);
+      lastTickAtRef.current = now;
+      if (dt > 0) tick(dt);
+    }, TICK_INTERVAL_MS);
 
     return () => {
       if (tickRef.current) clearInterval(tickRef.current);
@@ -70,7 +77,7 @@ export const GameLayout: React.FC = () => {
       <header className="game-header">
         <div className="header-left">
           <span className="game-title">IT-TYCOON</span>
-          <span className="game-version">v1.0</span>
+          <span className="game-version">{APP_VERSION}</span>
         </div>
         <div className="header-center">
           <span className="header-tagline">
@@ -103,7 +110,7 @@ export const GameLayout: React.FC = () => {
       {/* Footer */}
       <footer className="game-footer">
         <span className="footer-text">
-          IT-TYCOON v1.0 · React 19 + TypeScript + Zustand ·
+          IT-TYCOON {APP_VERSION} · React 19 + TypeScript + Zustand ·
           Auto-save every 30s · Data persisted in localStorage
         </span>
         <span className="footer-warn">

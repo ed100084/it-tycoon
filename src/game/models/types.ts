@@ -8,7 +8,7 @@ export interface HardwareDefinition {
   uSize: number;
   ascii: string[];
   description: string;
-  unlockAt: number; // tier index unlock threshold (0 = start unlocked)
+  unlockAt: number; // units of the PREVIOUS tier the player must own before this tier appears (0 = always visible)
 }
 
 export interface PUEDefinition {
@@ -50,14 +50,36 @@ export interface ProcurementRequest {
   status: ProcurementStatus;
 }
 
-export interface ZoneState {
+export type ContractServiceType = 'colocation' | 'vps' | 'managed' | 'cloud';
+
+/** A pending customer offer the player can accept or decline. */
+export interface ContractOffer {
   id: string;
-  name: string;
-  capacity: number;
-  used: number;
-  unlocked: boolean;
-  cpsMultiplier: number;
-  powerMultiplier: number;
+  clientName: string;
+  serviceType: ContractServiceType;
+  reservedUnits: number;        // rack U the contract occupies while active
+  payoutPerSecond: number;      // CF/s paid while the datacenter is online
+  durationSeconds: number;      // total contract length once signed
+  signingBonus: number;         // one-off CF paid on accept
+  slaPenaltyPerSecond: number;  // satisfaction lost per second of downtime (SLA breach)
+  completionReward: number;     // satisfaction granted on successful completion
+  createdAt: number;
+  expiresAt: number;            // gameTime when the offer lapses if not accepted
+}
+
+/** A signed, running contract. */
+export interface ActiveContract {
+  id: string;
+  clientName: string;
+  serviceType: ContractServiceType;
+  reservedUnits: number;
+  payoutPerSecond: number;
+  slaPenaltyPerSecond: number;
+  completionReward: number;
+  startedAt: number;
+  endsAt: number;               // gameTime when the contract completes
+  breachSeconds: number;        // accumulated downtime during this contract
+  totalPaid: number;            // CF earned from this contract so far
 }
 
 export type AuditEventType = 'iso27001' | 'moh' | 'client' | 'drill';
@@ -75,17 +97,6 @@ export interface AuditEvent {
   satisfactionReward: number;
 }
 
-export interface TechNode {
-  id: string;
-  name: string;
-  description: string;
-  cost: number; // Reputation cost
-  requires: string[];
-  excludes: string[];
-  effect: Record<string, number>;
-  unlocked: boolean;
-}
-
 export type AchievementCategory =
   | 'milestone'
   | 'hardware'
@@ -94,15 +105,8 @@ export type AchievementCategory =
   | 'expansion'
   | 'bureaucracy'
   | 'prestige'
-  | 'technology';
-
-export interface Achievement {
-  id: string;
-  name: string;
-  description: string;
-  category: AchievementCategory;
-  unlocked: boolean;
-}
+  | 'technology'
+  | 'contract';
 
 export interface SaveData {
   version: number;
@@ -119,6 +123,13 @@ export interface SaveData {
   nextAuditAt?: number;
   resolvedAudits?: number;
   failedAudits?: number;
+  contracts?: ActiveContract[];
+  contractOffers?: ContractOffer[];
+  nextContractOfferAt?: number;
+  completedContracts?: number;
+  breachedContracts?: number;
+  totalContractsSigned?: number;
+  totalContractRevenue?: number;
   satisfaction: number;
   reputation: number;
   totalEarnedReputation: number;

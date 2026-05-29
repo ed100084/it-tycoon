@@ -11,9 +11,11 @@ import {
 import { CAPACITY_WARNING_THRESHOLD } from '../../game/config/facility.config';
 import { TECH_NODE_DEFS } from '../../game/config/tech.config';
 import { ACHIEVEMENT_DEFS } from '../../game/config/achievement.config';
+import { calcContractIncomePerSecond } from '../../game/systems/contracts';
 
 export const ResourceBar: React.FC = () => {
-  const { compute, totalEarnedCompute, metrics, isShutdown, pueLevel, satisfaction, reputation, influence, prestigeCount, techNodes, unlockedAchievements, hardware, rackCapacity, facilityRegions, procurementRequests, auditEvents } = useGameStore();
+  const { compute, totalEarnedCompute, metrics, isShutdown, pueLevel, satisfaction, reputation, influence, prestigeCount, techNodes, unlockedAchievements, hardware, rackCapacity, facilityRegions, procurementRequests, auditEvents, contracts } = useGameStore();
+  const contractIncome = calcContractIncomePerSecond(contracts);
   const currentPue = PUE_DEFS[pueLevel]?.pue ?? 2.0;
   const usedRackUnits = calcUsedRackUnits(hardware);
   const rackUtilization = calcRackUtilization(hardware, rackCapacity);
@@ -97,6 +99,15 @@ export const ResourceBar: React.FC = () => {
         <span className="res-label">AUDITS</span>
         <span className={`res-value ${auditEvents.length > 0 ? 'glow-red' : 'glow-green-dim'}`}>
           {auditEvents.length}
+        </span>
+      </div>
+
+      <div className="resource-divider">║</div>
+
+      <div className="resource-item">
+        <span className="res-label">CONTRACTS</span>
+        <span className={`res-value ${contracts.length > 0 ? 'glow-green' : 'glow-green-dim'}`}>
+          {contracts.length}{contractIncome > 0 ? ` +${formatNumber(contractIncome)}/s` : ''}
         </span>
       </div>
 

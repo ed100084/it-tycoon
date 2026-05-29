@@ -121,8 +121,8 @@ export const HARDWARE_DEFS: HardwareDefinition[] = [
       '  ║  HYPERSCALE CLOUD  ║  ',
       '  ╚═══════════════════╝  ',
     ],
-    description: '超大型資料中心。雲端服務規模。(v1.0)',
-    unlockAt: 50,
+    description: '超大型資料中心。雲端服務規模。',
+    unlockAt: 12,
   },
   {
     id: 'T7',
@@ -138,8 +138,8 @@ export const HARDWARE_DEFS: HardwareDefinition[] = [
       '  ║  ∞ ENTANGLED ∞    ║  ',
       '  ◈══════════════════◈  ',
     ],
-    description: '量子運算節點。突破物理限制的算力奇蹟。(v1.0)',
-    unlockAt: 100,
+    description: '量子運算節點。突破物理限制的算力奇蹟。',
+    unlockAt: 8,
   },
 ];
 

@@ -21,10 +21,24 @@ import {
   calcRegionExpansionCost,
   calcRegionUnlockReady,
   calcTotalRackCapacity,
+  calcUsedRackUnits,
   canInstallHardware,
   createDefaultFacilityRegions,
 } from '../game/systems/facility';
 import { FACILITY_REGION_DEFS, type FacilityRegionId } from '../game/config/facility.config';
+import {
+  calcContractReservedUnits,
+  calcInitialContractOfferAt,
+  calcNextContractOfferAt,
+  canSpawnContractOffer,
+  createContractOffer,
+  isContractOfferExpired,
+  signContract,
+} from '../game/systems/contracts';
+import {
+  CONTRACT_BREACH_TERMINATION_SECONDS,
+  CONTRACT_TERMINATION_PENALTY_MULTIPLIER,
+} from '../game/config/contract.config';
 import {
   SATISFACTION_CAPACITY_PENALTY,
   SATISFACTION_RECOVERY_RATE,
@@ -57,7 +71,7 @@ import {
   evaluateAchievementUnlocks,
   mergeAchievementUnlocks,
 } from '../game/systems/achievements';
-import type { AuditEvent, FacilityRegionState, HardwareState, OfflineEarningsReport, ProcurementRequest } from '../game/models/types';
+import type { ActiveContract, AuditEvent, ContractOffer, FacilityRegionState, HardwareState, OfflineEarningsReport, ProcurementRequest } from '../game/models/types';
 
 export interface GameStore {
   // Core resources
@@ -87,6 +101,15 @@ export interface GameStore {
   resolvedAudits: number;
   failedAudits: number;
 
+  // Contracts
+  contracts: ActiveContract[];
+  contractOffers: ContractOffer[];
+  nextContractOfferAt: number;
+  completedContracts: number;
+  breachedContracts: number;
+  totalContractsSigned: number;
+  totalContractRevenue: number;
+
   // Meta
   lastSaveTime: number;
   gameTime: number;
@@ -108,6 +131,8 @@ export interface GameStore {
   expandRegion: (regionId: FacilityRegionId) => void;
   unlockRegion: (regionId: FacilityRegionId) => void;
   resolveAudit: (auditId: string) => void;
+  acceptContract: (offerId: string) => void;
+  declineContract: (offerId: string) => void;
   prestige: () => void;
   prestigeTier2: () => void;
   unlockTechNode: (nodeId: string) => void;
@@ -210,6 +235,46 @@ const normalizeAuditEvents = (events: AuditEvent[] | undefined): AuditEvent[] =>
     }));
 };
 
+const CONTRACT_SERVICE_TYPES = new Set(['colocation', 'vps', 'managed', 'cloud']);
+
+const normalizeContracts = (contracts: ActiveContract[] | undefined): ActiveContract[] => {
+  if (!Array.isArray(contracts)) return [];
+  return contracts
+    .filter((c) => c && typeof c.id === 'string' && CONTRACT_SERVICE_TYPES.has(c.serviceType))
+    .map((c) => ({
+      id: c.id,
+      clientName: typeof c.clientName === 'string' ? c.clientName : 'Client',
+      serviceType: c.serviceType,
+      reservedUnits: clampInteger(c.reservedUnits, 0, 0, Number.MAX_SAFE_INTEGER),
+      payoutPerSecond: clampNumber(c.payoutPerSecond, 0, 0, Number.MAX_SAFE_INTEGER),
+      slaPenaltyPerSecond: clampNumber(c.slaPenaltyPerSecond, 0, 0, 100),
+      completionReward: clampNumber(c.completionReward, 0, 0, 100),
+      startedAt: clampNumber(c.startedAt, 0, 0, Number.MAX_SAFE_INTEGER),
+      endsAt: clampNumber(c.endsAt, 0, 0, Number.MAX_SAFE_INTEGER),
+      breachSeconds: clampNumber(c.breachSeconds, 0, 0, Number.MAX_SAFE_INTEGER),
+      totalPaid: clampNumber(c.totalPaid, 0, 0, Number.MAX_SAFE_INTEGER),
+    }));
+};
+
+const normalizeContractOffers = (offers: ContractOffer[] | undefined): ContractOffer[] => {
+  if (!Array.isArray(offers)) return [];
+  return offers
+    .filter((o) => o && typeof o.id === 'string' && CONTRACT_SERVICE_TYPES.has(o.serviceType))
+    .map((o) => ({
+      id: o.id,
+      clientName: typeof o.clientName === 'string' ? o.clientName : 'Client',
+      serviceType: o.serviceType,
+      reservedUnits: clampInteger(o.reservedUnits, 0, 0, Number.MAX_SAFE_INTEGER),
+      payoutPerSecond: clampNumber(o.payoutPerSecond, 0, 0, Number.MAX_SAFE_INTEGER),
+      durationSeconds: clampNumber(o.durationSeconds, 60, 1, Number.MAX_SAFE_INTEGER),
+      signingBonus: clampNumber(o.signingBonus, 0, 0, Number.MAX_SAFE_INTEGER),
+      slaPenaltyPerSecond: clampNumber(o.slaPenaltyPerSecond, 0, 0, 100),
+      completionReward: clampNumber(o.completionReward, 0, 0, 100),
+      createdAt: clampNumber(o.createdAt, 0, 0, Number.MAX_SAFE_INTEGER),
+      expiresAt: clampNumber(o.expiresAt, 0, 0, Number.MAX_SAFE_INTEGER),
+    }));
+};
+
 const normalizeAchievementIds = (achievementIds: string[] | undefined): string[] => {
   if (!Array.isArray(achievementIds)) return [];
   const validIds = new Set(ACHIEVEMENT_DEFS.map((achievement) => achievement.id));
@@ -251,6 +316,13 @@ export const useGameStore = create<GameStore>((set, get) => ({
   nextAuditAt: calcInitialAuditAt(0),
   resolvedAudits: 0,
   failedAudits: 0,
+  contracts: [],
+  contractOffers: [],
+  nextContractOfferAt: calcInitialContractOfferAt(0),
+  completedContracts: 0,
+  breachedContracts: 0,
+  totalContractsSigned: 0,
+  totalContractRevenue: 0,
   recentAchievementIds: [],
 
   click: () => {
@@ -278,10 +350,10 @@ export const useGameStore = create<GameStore>((set, get) => ({
   },
 
   buyHardware: (tierId, qty) => {
-    const { compute, hardware, rackCapacity, procurementRequests, gameTime } = get();
+    const { compute, hardware, rackCapacity, procurementRequests, contracts, gameTime } = get();
     const hw = hardware[tierId] ?? { owned: 0, upgradeLevel: 1 };
     const cost = qty === 1 ? calcHardwareCost(tierId, hw.owned) : calcBulkCost(tierId, hw.owned, qty);
-    const effectiveRackCapacity = rackCapacity - calcProcurementRackUnits(procurementRequests);
+    const effectiveRackCapacity = rackCapacity - calcProcurementRackUnits(procurementRequests) - calcContractReservedUnits(contracts);
     if (compute < cost) return;
     if (!canInstallHardware(tierId, qty, hardware, effectiveRackCapacity)) return;
 
@@ -300,7 +372,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
     set((s) => {
       const prevHw = s.hardware[tierId] ?? { owned: 0, upgradeLevel: 1 };
-      const currentEffectiveCapacity = s.rackCapacity - calcProcurementRackUnits(s.procurementRequests);
+      const currentEffectiveCapacity = s.rackCapacity - calcProcurementRackUnits(s.procurementRequests) - calcContractReservedUnits(s.contracts);
       if (!canInstallHardware(tierId, qty, s.hardware, currentEffectiveCapacity)) return {};
       const newHardware = {
         ...s.hardware,
@@ -445,6 +517,32 @@ export const useGameStore = create<GameStore>((set, get) => ({
     }));
   },
 
+  acceptContract: (offerId) => {
+    set((s) => {
+      const offer = s.contractOffers.find((o) => o.id === offerId);
+      if (!offer) return {};
+      const reservedUnits =
+        calcUsedRackUnits(s.hardware)
+        + calcProcurementRackUnits(s.procurementRequests)
+        + calcContractReservedUnits(s.contracts);
+      const freeUnits = s.rackCapacity - reservedUnits;
+      if (offer.reservedUnits > freeUnits) return {};
+
+      return {
+        contractOffers: s.contractOffers.filter((o) => o.id !== offerId),
+        contracts: [...s.contracts, signContract(offer, s.gameTime)],
+        compute: s.compute + offer.signingBonus,
+        totalEarnedCompute: s.totalEarnedCompute + offer.signingBonus,
+        totalContractsSigned: s.totalContractsSigned + 1,
+        totalContractRevenue: s.totalContractRevenue + offer.signingBonus,
+      };
+    });
+  },
+
+  declineContract: (offerId) => {
+    set((s) => ({ contractOffers: s.contractOffers.filter((o) => o.id !== offerId) }));
+  },
+
   prestige: () => {
     const s = get();
     const reputationGain = calcPrestigeReputationGain(
@@ -476,6 +574,13 @@ export const useGameStore = create<GameStore>((set, get) => ({
       nextAuditAt: calcInitialAuditAt(0),
       resolvedAudits: s.resolvedAudits,
       failedAudits: s.failedAudits,
+      contracts: [],
+      contractOffers: [],
+      nextContractOfferAt: calcInitialContractOfferAt(0),
+      completedContracts: s.completedContracts,
+      breachedContracts: s.breachedContracts,
+      totalContractsSigned: s.totalContractsSigned,
+      totalContractRevenue: s.totalContractRevenue,
       lastSaveTime: Date.now(),
       gameTime: INITIAL_STATE.gameTime,
       unlockedAchievements: s.unlockedAchievements,
@@ -512,6 +617,13 @@ export const useGameStore = create<GameStore>((set, get) => ({
       nextAuditAt: calcInitialAuditAt(0),
       resolvedAudits: s.resolvedAudits,
       failedAudits: s.failedAudits,
+      contracts: [],
+      contractOffers: [],
+      nextContractOfferAt: calcInitialContractOfferAt(0),
+      completedContracts: s.completedContracts,
+      breachedContracts: s.breachedContracts,
+      totalContractsSigned: s.totalContractsSigned,
+      totalContractRevenue: s.totalContractRevenue,
       lastSaveTime: Date.now(),
       gameTime: INITIAL_STATE.gameTime,
       unlockedAchievements: s.unlockedAchievements,
@@ -560,11 +672,13 @@ export const useGameStore = create<GameStore>((set, get) => ({
       };
       const techEffects = calcTechEffects(s.techNodes);
       const nextGameTime = s.gameTime + dt;
+      const contractReservedUnits = calcContractReservedUnits(s.contracts);
+      const capacityForHardware = s.rackCapacity - contractReservedUnits;
       let hardware = s.hardware;
       let deliveredCount = 0;
       const procurementRequests = s.procurementRequests.flatMap((request) => {
         if (request.readyAt > s.gameTime + dt) return [request.status === 'blocked' ? { ...request, status: 'pending' as const } : request];
-        if (!canInstallHardware(request.tierId, request.qty, hardware, s.rackCapacity)) {
+        if (!canInstallHardware(request.tierId, request.qty, hardware, capacityForHardware)) {
           return [{ ...request, status: 'blocked' as const }];
         }
 
@@ -605,20 +719,74 @@ export const useGameStore = create<GameStore>((set, get) => ({
         nextAuditAt = calcNextAuditAt(nextGameTime);
       }
 
+      // ─── Contracts ───
+      // Online contracts pay CF/s; while shut down they accrue downtime, lose
+      // satisfaction, and (past the breach cap) terminate early. Reaching the
+      // end date completes the contract for a satisfaction reward.
+      let completedContracts = s.completedContracts;
+      let breachedContracts = s.breachedContracts;
+      let contractIncome = 0;
+      let contractSatisfaction = 0;
+      const nextContracts: ActiveContract[] = [];
+      for (const contract of s.contracts) {
+        let breachSeconds = contract.breachSeconds;
+        let totalPaid = contract.totalPaid;
+        if (s.isShutdown) {
+          breachSeconds += dt;
+          contractSatisfaction -= contract.slaPenaltyPerSecond * dt;
+        } else {
+          const pay = contract.payoutPerSecond * dt;
+          contractIncome += pay;
+          totalPaid += pay;
+        }
+        if (breachSeconds >= CONTRACT_BREACH_TERMINATION_SECONDS) {
+          breachedContracts += 1;
+          contractSatisfaction -= contract.completionReward * CONTRACT_TERMINATION_PENALTY_MULTIPLIER;
+          continue;
+        }
+        if (nextGameTime >= contract.endsAt) {
+          completedContracts += 1;
+          contractSatisfaction += contract.completionReward;
+          continue;
+        }
+        nextContracts.push({ ...contract, breachSeconds, totalPaid });
+      }
+      const contracts = nextContracts;
+      const totalContractRevenue = s.totalContractRevenue + contractIncome;
+
+      let contractOffers = s.contractOffers.filter((offer) => !isContractOfferExpired(offer, nextGameTime));
+      let nextContractOfferAt = s.nextContractOfferAt;
+      if (nextGameTime >= nextContractOfferAt) {
+        if (canSpawnContractOffer(contractOffers, contracts)) {
+          const offer = createContractOffer(nextGameTime, s.totalEarnedCompute);
+          if (offer) contractOffers = [...contractOffers, offer];
+        }
+        nextContractOfferAt = calcNextContractOfferAt(nextGameTime);
+      }
+
+      const contractState = {
+        contracts,
+        contractOffers,
+        nextContractOfferAt,
+        completedContracts,
+        breachedContracts,
+        totalContractRevenue,
+      };
+
       const satisfaction = clampNumber(
-        s.satisfaction + recovery + deliveredCount * PROCUREMENT_SATISFACTION_ON_DELIVERY - pendingPenalty - capacityPenalty - shutdownPenalty - auditPenalty,
+        s.satisfaction + recovery + deliveredCount * PROCUREMENT_SATISFACTION_ON_DELIVERY + contractSatisfaction - pendingPenalty - capacityPenalty - shutdownPenalty - auditPenalty,
         INITIAL_STATE.satisfaction,
         0,
         100
       );
 
       if (s.isShutdown) {
-        return withAchievementUnlocks({ hardware, procurementRequests, auditEvents, nextAuditAt, failedAudits, satisfaction, metrics, gameTime: nextGameTime });
+        return withAchievementUnlocks({ hardware, procurementRequests, auditEvents, nextAuditAt, failedAudits, satisfaction, metrics, gameTime: nextGameTime, ...contractState });
       }
 
       // Free-power buffer after emergency restart
       if (s.shutdownBuffer > 0) {
-        const grossGain = metrics.totalCPS * dt;
+        const grossGain = metrics.totalCPS * dt + contractIncome;
         return withAchievementUnlocks({
           compute: s.compute + grossGain,
           totalEarnedCompute: s.totalEarnedCompute + grossGain,
@@ -631,16 +799,18 @@ export const useGameStore = create<GameStore>((set, get) => ({
           metrics,
           gameTime: nextGameTime,
           shutdownBuffer: Math.max(0, s.shutdownBuffer - dt),
+          ...contractState,
         });
       }
 
-      const newCompute = s.compute + metrics.netCPS * dt;
+      const newCompute = s.compute + metrics.netCPS * dt + contractIncome;
 
       if (newCompute < 0) {
         return withAchievementUnlocks({
           compute: 0,
           isShutdown: true,
           emergencyClicks: 0,
+          totalEarnedCompute: s.totalEarnedCompute + contractIncome,
           hardware,
           procurementRequests,
           auditEvents,
@@ -649,10 +819,11 @@ export const useGameStore = create<GameStore>((set, get) => ({
           satisfaction,
           metrics,
           gameTime: nextGameTime,
+          ...contractState,
         });
       }
 
-      const earned = metrics.netCPS > 0 ? metrics.netCPS * dt : 0;
+      const earned = (metrics.netCPS > 0 ? metrics.netCPS * dt : 0) + contractIncome;
       return withAchievementUnlocks({
         compute: newCompute,
         totalEarnedCompute: s.totalEarnedCompute + earned,
@@ -664,6 +835,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
         satisfaction,
         metrics,
         gameTime: nextGameTime,
+        ...contractState,
       });
     });
   },
@@ -680,6 +852,13 @@ export const useGameStore = create<GameStore>((set, get) => ({
       nextAuditAt: s.nextAuditAt,
       resolvedAudits: s.resolvedAudits,
       failedAudits: s.failedAudits,
+      contracts: s.contracts,
+      contractOffers: s.contractOffers,
+      nextContractOfferAt: s.nextContractOfferAt,
+      completedContracts: s.completedContracts,
+      breachedContracts: s.breachedContracts,
+      totalContractsSigned: s.totalContractsSigned,
+      totalContractRevenue: s.totalContractRevenue,
       rackCapacity: s.rackCapacity,
       facilityRegions: s.facilityRegions,
       pueLevel: s.pueLevel,
@@ -705,6 +884,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
     const hardware = normalizeHardware(data.hardware ?? {});
     const procurementRequests = normalizeProcurementRequests(data.procurementRequests);
     const auditEvents = normalizeAuditEvents(data.auditEvents);
+    const contracts = normalizeContracts(data.contracts);
+    const contractOffers = normalizeContractOffers(data.contractOffers);
     const pueLevel = clampInteger(data.pueLevel, INITIAL_STATE.pueLevel, 0, MAX_PUE_LEVEL_V02);
     const facilityRegions = normalizeFacilityRegions(data.facilityRegions, data.rackCapacity);
     const techNodeIds = Array.isArray(data.techNodes) ? data.techNodes : [];
@@ -740,6 +921,13 @@ export const useGameStore = create<GameStore>((set, get) => ({
       nextAuditAt: clampNumber(data.nextAuditAt, calcInitialAuditAt(data.gameTime ?? 0), 0, Number.MAX_SAFE_INTEGER),
       resolvedAudits: clampInteger(data.resolvedAudits, 0, 0, Number.MAX_SAFE_INTEGER),
       failedAudits: clampInteger(data.failedAudits, 0, 0, Number.MAX_SAFE_INTEGER),
+      contracts,
+      contractOffers,
+      nextContractOfferAt: clampNumber(data.nextContractOfferAt, calcInitialContractOfferAt(data.gameTime ?? 0), 0, Number.MAX_SAFE_INTEGER),
+      completedContracts: clampInteger(data.completedContracts, 0, 0, Number.MAX_SAFE_INTEGER),
+      breachedContracts: clampInteger(data.breachedContracts, 0, 0, Number.MAX_SAFE_INTEGER),
+      totalContractsSigned: clampInteger(data.totalContractsSigned, 0, 0, Number.MAX_SAFE_INTEGER),
+      totalContractRevenue: clampNumber(data.totalContractRevenue, 0, 0, Number.MAX_SAFE_INTEGER),
       lastSaveTime,
       gameTime: clampNumber(data.gameTime, INITIAL_STATE.gameTime, 0, Number.MAX_SAFE_INTEGER),
       unlockedAchievements: normalizeAchievementIds(data.unlockedAchievements),
@@ -768,6 +956,13 @@ export const useGameStore = create<GameStore>((set, get) => ({
       nextAuditAt: calcInitialAuditAt(0),
       resolvedAudits: 0,
       failedAudits: 0,
+      contracts: [],
+      contractOffers: [],
+      nextContractOfferAt: calcInitialContractOfferAt(0),
+      completedContracts: 0,
+      breachedContracts: 0,
+      totalContractsSigned: 0,
+      totalContractRevenue: 0,
       recentAchievementIds: [],
     });
   },

@@ -2,6 +2,8 @@ import { SAVE_KEY, GAME_VERSION, MAX_OFFLINE_SECONDS, INITIAL_STATE } from '../c
 import { computeTickMetrics } from './hardware';
 import type { SaveData, HardwareState, OfflineEarningsReport } from '../models/types';
 
+type RawSave = Record<string, unknown> & { version?: number };
+
 export function createDefaultSave(): SaveData {
   return {
     version: GAME_VERSION,
@@ -18,7 +20,9 @@ export function serializeSave(state: SaveData): string {
 export function deserializeSave(raw: string): SaveData | null {
   try {
     const data = JSON.parse(raw) as SaveData;
-    if (!data || typeof data !== 'object' || !data.version) return null;
+    if (!data || typeof data !== 'object') return null;
+    // Pre-versioned legacy saves are accepted and treated as version 0 so the
+    // migration chain can upgrade them instead of being silently discarded.
     return data;
   } catch {
     return null;
@@ -47,9 +51,61 @@ export function clearStorage(): void {
   localStorage.removeItem(SAVE_KEY);
 }
 
+/**
+ * Migration registry. Each entry upgrades a save from version `key` to `key + 1`.
+ * Add a new entry whenever GAME_VERSION is bumped; the chain in migrateSave()
+ * applies them in order so any old save lands on the current schema.
+ *
+ * Migrations only need to backfill/transform fields — final clamping and
+ * validation happen in the store's normalize* helpers on load.
+ */
+const num = (value: unknown, fallback: number): number =>
+  typeof value === 'number' && Number.isFinite(value) ? value : fallback;
+
+export const SAVE_MIGRATIONS: Record<number, (s: RawSave) => RawSave> = {
+  // v0 (pre-versioned / legacy) -> v1: backfill fields introduced up to v1.0
+  // (reputation, prestige, influence, tech tree, achievements).
+  0: (s) => ({
+    ...s,
+    reputation: num(s.reputation, INITIAL_STATE.reputation),
+    totalEarnedReputation: num(s.totalEarnedReputation, num(s.reputation, INITIAL_STATE.totalEarnedReputation)),
+    influence: num(s.influence, INITIAL_STATE.influence),
+    prestigeCount: num(s.prestigeCount, INITIAL_STATE.prestigeCount),
+    satisfaction: num(s.satisfaction, INITIAL_STATE.satisfaction),
+    techNodes: Array.isArray(s.techNodes) ? s.techNodes : [...INITIAL_STATE.techNodes],
+    unlockedAchievements: Array.isArray(s.unlockedAchievements)
+      ? s.unlockedAchievements
+      : [...INITIAL_STATE.unlockedAchievements],
+    version: 1,
+  }),
+  // v1 -> v2: introduce the contract system. Old saves have no contracts.
+  1: (s) => ({
+    ...s,
+    contracts: Array.isArray(s.contracts) ? s.contracts : [],
+    contractOffers: Array.isArray(s.contractOffers) ? s.contractOffers : [],
+    completedContracts: num(s.completedContracts, 0),
+    breachedContracts: num(s.breachedContracts, 0),
+    totalContractsSigned: num(s.totalContractsSigned, 0),
+    totalContractRevenue: num(s.totalContractRevenue, 0),
+    version: 2,
+  }),
+};
+
 export function migrateSave(data: SaveData): SaveData {
-  // Future migrations go here when GAME_VERSION bumps
-  return data;
+  let working: RawSave = { ...(data as unknown as RawSave) };
+  let version = num(working.version, 0);
+
+  // Apply migrations sequentially until the save reaches the current schema.
+  while (version < GAME_VERSION) {
+    const migrate = SAVE_MIGRATIONS[version];
+    working = migrate ? migrate(working) : { ...working, version: version + 1 };
+    const nextVersion = num(working.version, version + 1);
+    // Guard against a migration that forgets to advance the version.
+    version = nextVersion > version ? nextVersion : version + 1;
+  }
+
+  working.version = GAME_VERSION;
+  return working as unknown as SaveData;
 }
 
 export function calcOfflineEarnings(

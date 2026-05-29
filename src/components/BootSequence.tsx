@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from 'react';
+import { APP_VERSION } from '../game/config/game.config';
 
 const BOOT_LINES = [
-  { text: '┌─ IT-TYCOON DATACENTER MANAGEMENT SYSTEM v1.0 ─────────────┐', delay: 0,    color: 'var(--tm-blue)', bold: true },
+  // APP_VERSION is 'vX.Y' (4 chars) so the fixed-width box stays aligned.
+  { text: `┌─ IT-TYCOON DATACENTER MANAGEMENT SYSTEM ${APP_VERSION} ─────────────┐`, delay: 0,    color: 'var(--tm-blue)', bold: true },
   { text: '│  ITDCMS Kernel 2.0 · React 19 · TypeScript · Zustand      │', delay: 80,   color: 'var(--tm-text-dim)' },
   { text: '└────────────────────────────────────────────────────────────┘', delay: 130,  color: 'var(--tm-blue)' },
   { text: '', delay: 160 },
