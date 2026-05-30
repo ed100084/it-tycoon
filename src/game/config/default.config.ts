@@ -1,4 +1,4 @@
-import { CreditRating } from '../core/types';
+import { CreditRating, FacilityRegion, CoolingLevel, ClimateRisk } from '../core/types';
 import type { GameConfig } from '../core/types';
 
 export const DEFAULT_CONFIG: Readonly<GameConfig> = Object.freeze({
@@ -54,5 +54,80 @@ export const DEFAULT_CONFIG: Readonly<GameConfig> = Object.freeze({
       { fromYear: 2022, rate: 0.0475 },
       { fromYear: 2024, rate: 0.0350 },
     ],
+  },
+  facility: {
+    regions: {
+      [FacilityRegion.North]: {
+        initialUnits: 100,
+        baseMonthlyRent: 200_000,
+        performanceBonus: 1.0,
+        climateRisk: ClimateRisk.Low,
+      },
+      [FacilityRegion.Central]: {
+        initialUnits: 500,
+        baseMonthlyRent: 800_000,
+        performanceBonus: 1.15,
+        climateRisk: ClimateRisk.Medium,
+        unlockMinMonthlyRevenue: 1_000_000,
+      },
+      [FacilityRegion.South]: {
+        initialUnits: 2000,
+        baseMonthlyRent: 2_500_000,
+        performanceBonus: 1.30,
+        climateRisk: ClimateRisk.High,
+        unlockMinMonthlyRevenue: 10_000_000,
+      },
+    },
+    coolingLevels: {
+      [CoolingLevel.Open]:      { pue: 2.00, investmentCost: 0,         unlockYear: 2000 },
+      [CoolingLevel.BasicAC]:   { pue: 1.80, investmentCost: 500_000,   unlockYear: 2000 },
+      [CoolingLevel.HotAisle]:  { pue: 1.60, investmentCost: 1_500_000, unlockYear: 2002 },
+      [CoolingLevel.Chiller]:   { pue: 1.40, investmentCost: 5_000_000, unlockYear: 2005 },
+      [CoolingLevel.InRow]:     { pue: 1.25, investmentCost: 8_000_000, unlockYear: 2008 },
+      [CoolingLevel.Liquid]:    { pue: 1.10, investmentCost: 15_000_000, unlockYear: 2013 },
+      [CoolingLevel.Immersion]: { pue: 1.05, investmentCost: 30_000_000, unlockYear: 2018 },
+    },
+    expansionCostMultiplier: 24,
+    expansionCapacityMultiplier: 0.5,
+    capacityWarningThreshold: 0.85,
+    geoRedundancyThreshold: 0.50,
+    geoRedundancySLABonus: -0.30,
+    electricityRates: [
+      { fromYear: 2000, ratePerKwh: 2.50 },
+      { fromYear: 2008, ratePerKwh: 2.80 },
+      { fromYear: 2013, ratePerKwh: 3.10 },
+      { fromYear: 2018, ratePerKwh: 3.30 },
+      { fromYear: 2022, ratePerKwh: 3.80 },
+    ],
+    hoursPerMonth: 744,
+  },
+  hardware: {
+    eolWarningMonthsBefore: 3,
+    installationMonthsPerUnit: 0,
+    largePurchaseThreshold: 5_000_000,
+    requisitionDeliveryDelay: 1,
+    requisitionDiscount: 0.75,
+    installmentMonths: 24,
+    eolFailureMultipliers: [1.0, 1.5, 2.0, 3.0] as [number, number, number, number],
+    salvageValueRate: 0.10,
+  },
+  software: {
+    eosWarningMonthsBefore: 3,
+    eosSecurityMultipliers: { quarter1: 1.2, quarter2: 1.5, quarter3plus: 2.0 },
+    eosComplianceScorePenalty: { quarter1: -30, quarter2: -50, quarter3plus: -70 },
+    compliancePenaltyAmount: 500_000,
+  },
+  contract: {
+    rfpResponseWindowMonths: 1,
+    renewalNoticeMonths: 1,
+    baseRFPsPerMonth: 1.5,
+    maxMonthlyPenaltyCap: 3.0,
+    churnProbabilities: {
+      dataBreachAndLate: 0.70,
+      consecutiveSLABreach: 0.50,
+      p1Over24Hours: 0.40,
+      lowSatisfactionProlonged: 0.30,
+      competitorOffer: 0.20,
+    },
   },
 });

@@ -224,6 +224,10 @@ export interface GameConfig {
   };
   time: TimeConfig;
   finance: FinanceConfig;
+  facility?: FacilityModuleConfig;
+  hardware?: HardwareModuleConfig;
+  software?: SoftwareModuleConfig;
+  contract?: ContractModuleConfig;
 }
 
 // ─── Save / load ──────────────────────────────────────────────────────────────
@@ -320,6 +324,384 @@ export interface CreditRatingFactor {
   factor: string;
   deltaScore: number;
   description: string;
+}
+
+// ─── Phase 2 enums ───────────────────────────────────────────────────────────
+
+export enum CoolingLevel {
+  Open      = 0,
+  BasicAC   = 1,
+  HotAisle  = 2,
+  Chiller   = 3,
+  InRow     = 4,
+  Liquid    = 5,
+  Immersion = 6,
+}
+
+export enum ClimateRisk {
+  Low    = 'LOW',
+  Medium = 'MEDIUM',
+  High   = 'HIGH',
+}
+
+export enum HardwareBrand {
+  Dell       = 'DELL',
+  HP_HPE     = 'HP_HPE',
+  IBM        = 'IBM',
+  Cisco      = 'CISCO',
+  Juniper    = 'JUNIPER',
+  Arista     = 'ARISTA',
+  Fortinet   = 'FORTINET',
+  PaloAlto   = 'PALO_ALTO',
+  Supermicro = 'SUPERMICRO',
+  APC        = 'APC',
+  Eaton      = 'EATON',
+  Vertiv     = 'VERTIV',
+  NetApp     = 'NETAPP',
+  PureStorage = 'PURE_STORAGE',
+  NVIDIA     = 'NVIDIA',
+  Other      = 'OTHER',
+}
+
+export enum CapacityUnit {
+  VPS            = 'vps',
+  ColoClients    = 'colo_clients',
+  StorageMult    = 'storage_multiplier',
+  SecurityLevel  = 'security_level',
+  PowerProtect   = 'power_protect_level',
+  PUEReduction   = 'pue_reduction',
+  BackupCoverage = 'backup_coverage',
+  NetworkPerf    = 'network_perf',
+}
+
+export enum AssetStatus {
+  InTransit  = 'IN_TRANSIT',
+  Installing = 'INSTALLING',
+  Active     = 'ACTIVE',
+  Failed     = 'FAILED',
+  EOL        = 'EOL',
+  Disposed   = 'DISPOSED',
+}
+
+export enum MaintenanceType {
+  Warranty   = 'WARRANTY',
+  NBD        = 'NBD',
+  FourHour   = 'FOUR_HOUR',
+  ThirdParty = 'THIRD_PARTY',
+  None       = 'NONE',
+}
+
+export enum PurchasePaymentMethod {
+  Cash            = 'CASH',
+  Installment     = 'INSTALLMENT',
+  RequisitionForm = 'REQUISITION',
+}
+
+export enum LicenseStatus {
+  Active     = 'ACTIVE',
+  EosWarning = 'EOS_WARNING',
+  EosExpired = 'EOS_EXPIRED',
+  Cancelled  = 'CANCELLED',
+  Upgrading  = 'UPGRADING',
+}
+
+export enum ComplianceRiskLevel {
+  None     = 'NONE',
+  Low      = 'LOW',
+  Medium   = 'MEDIUM',
+  High     = 'HIGH',
+  Critical = 'CRITICAL',
+}
+
+export enum SoftwareEffectType {
+  VirtualizationDensity = 'VIRT_DENSITY',
+  StoragePerformance    = 'STORAGE_PERF',
+  BackupCoverage        = 'BACKUP_COVERAGE',
+  SecurityDetection     = 'SEC_DETECTION',
+  IncidentResponseTime  = 'IRT_REDUCTION',
+  ComplianceScore       = 'COMPLIANCE_SCORE',
+}
+
+// ─── Facility data structures ─────────────────────────────────────────────────
+
+export interface FacilityRegionState {
+  region: FacilityRegion;
+  isUnlocked: boolean;
+  totalUnits: number;
+  usedUnits: number;
+  utilizationRate: number;
+  coolingLevel: CoolingLevel;
+  pue: number;
+  totalWatts: number;
+  monthlyRent: Money;
+  assignedStaffIds: EntityId[];
+  climateRisk: ClimateRisk;
+  expansionCount: number;
+}
+
+// ─── Hardware data structures ─────────────────────────────────────────────────
+
+export interface HardwareModel {
+  id: string;
+  name: string;
+  category: HardwareCategory;
+  era: number;
+  unlockYear: number;
+  eolYear: number;
+  specs: {
+    rackUnits: number;
+    powerWatts: number;
+    serviceCapacity: number;
+    capacityUnit: CapacityUnit;
+  };
+  pricing: {
+    basePriceNTD: Money;
+    maintenanceRatePerYear: number;
+    warrantyYears: number;
+  };
+  brand: HardwareBrand;
+  isODM: boolean;
+  isPremium: boolean;
+  failureRateBase: number;
+  tags: string[];
+}
+
+export interface HardwareAsset {
+  id: EntityId;
+  modelId: string;
+  region: FacilityRegion;
+  purchaseDate: GameDate;
+  purchasePrice: Money;
+  bookValue: Money;
+  accumulatedDepreciation: Money;
+  status: AssetStatus;
+  warrantyExpiry: GameDate;
+  eolDate: GameDate;
+  eolWarningShown: boolean;
+  monthsSinceEOL: number;
+  maintenanceType: MaintenanceType;
+  isEOL: boolean;
+  isInstalled: boolean;
+  installationCompleteDate: GameDate | null;
+  purchaseOrderId: EntityId;
+}
+
+export interface PurchaseOrder {
+  id: EntityId;
+  modelId: string;
+  quantity: number;
+  unitPrice: Money;
+  totalPrice: Money;
+  paymentMethod: PurchasePaymentMethod;
+  deliveryDate: GameDate;
+  status: 'pending' | 'delivered' | 'cancelled';
+  installationEngineerRequired: boolean;
+}
+
+export interface DisposalResult {
+  assetId: EntityId;
+  salvageValue: Money;
+  date: GameDate;
+}
+
+export interface DepreciationSummary {
+  totalMonthlyDepreciation: Money;
+  byAsset: Array<{ assetId: EntityId; amount: Money }>;
+}
+
+// ─── Software data structures ─────────────────────────────────────────────────
+
+export interface SoftwareEffect {
+  type: SoftwareEffectType;
+  value: number;
+}
+
+export interface SoftwareProduct {
+  id: string;
+  name: string;
+  category: SoftwareCategory;
+  licenseType: LicenseType;
+  vendor: string;
+  unlockYear: number;
+  eosYear: number;
+  eosMonth?: number;
+  annualCostNTD: Money;
+  effects: SoftwareEffect[];
+  isFreeOpenSource: boolean;
+  upgradePathFrom?: string[];
+  notes?: string;
+}
+
+export interface SoftwareLicense {
+  id: EntityId;
+  productId: string;
+  version: string;
+  licenseType: LicenseType;
+  purchaseDate: GameDate;
+  renewalDate: GameDate;
+  eosDate: GameDate;
+  eosWarningShown: boolean;
+  monthsSinceEOS: number;
+  status: LicenseStatus;
+  assignedServerIds: EntityId[];
+  annualCostNTD: Money;
+  isAutoRenew: boolean;
+  complianceRiskLevel: ComplianceRiskLevel;
+}
+
+// ─── Contract data structures ─────────────────────────────────────────────────
+
+export interface SpecialRequirement {
+  type: 'iso27001' | 'three_shift' | 'geo_redundancy' | 'gpu_nodes' | 'custom';
+  description: string;
+  isMet: boolean;
+}
+
+export interface FeasibilityReport {
+  spaceOk: boolean;
+  techStackOk: boolean;
+  staffOk: boolean;
+  slaAchievable: boolean;
+  missingRequirements: string[];
+}
+
+export interface RFP {
+  id: EntityId;
+  clientId: EntityId;
+  clientName: string;
+  clientTier: CustomerTier;
+  serviceType: ServiceType;
+  budgetRange: { min: Money; max: Money };
+  contractDurationMonths: number;
+  slaRequirement: number;
+  specialRequirements: SpecialRequirement[];
+  expiresAt: GameDate;
+  estimatedFeasibility: FeasibilityReport;
+  competitorPresence: boolean;
+  generatedDate: GameDate;
+}
+
+export interface BidParams {
+  monthlyFeeNTD: Money;
+  slaLevel: number;
+  contractDurationMonths: number;
+  breachPenaltyMultiplier: number;
+  specialServices: ServiceType[];
+}
+
+export interface BidSubmission {
+  rfpId: EntityId;
+  bid: BidParams;
+  submittedAt: GameDate;
+  resultExpectedAt: GameDate;
+  winProbability: number;
+}
+
+export interface SLAMonthRecord {
+  date: GameDate;
+  uptimePercent: number;
+  slaBreached: boolean;
+  penaltyAmount: Money;
+  incidentIds: EntityId[];
+}
+
+export interface Contract {
+  id: EntityId;
+  clientId: EntityId;
+  clientName: string;
+  clientTier: CustomerTier;
+  serviceType: ServiceType;
+  status: ContractStatus;
+  monthlyFeeNTD: Money;
+  slaLevel: number;
+  startDate: GameDate;
+  endDate: GameDate;
+  renewalNoticeMonths: number;
+  breachPenaltyMultiplier: number;
+  specialServices: ServiceType[];
+  slaRecord: SLAMonthRecord[];
+  clientSatisfaction: number;
+  totalRevenue: Money;
+  totalPenaltiesPaid: Money;
+}
+
+export interface SLADashboard {
+  overallSLARate: number;
+  atRiskContracts: Array<{
+    contractId: EntityId;
+    clientName: string;
+    monthlyFee: Money;
+    slaRate: number;
+  }>;
+  monthlySLASummary: Array<{
+    date: GameDate;
+    breachCount: number;
+    totalPenalties: Money;
+  }>;
+}
+
+// ─── Module configs ───────────────────────────────────────────────────────────
+
+export interface FacilityModuleConfig {
+  regions: Record<FacilityRegion, {
+    initialUnits: number;
+    baseMonthlyRent: Money;
+    performanceBonus: number;
+    climateRisk: ClimateRisk;
+    unlockMinMonthlyRevenue?: Money;
+  }>;
+  coolingLevels: Record<CoolingLevel, {
+    pue: number;
+    investmentCost: Money;
+    unlockYear: number;
+  }>;
+  expansionCostMultiplier: number;
+  expansionCapacityMultiplier: number;
+  capacityWarningThreshold: number;
+  geoRedundancyThreshold: number;
+  geoRedundancySLABonus: number;
+  electricityRates: Array<{ fromYear: number; ratePerKwh: number }>;
+  hoursPerMonth: number;
+}
+
+export interface HardwareModuleConfig {
+  eolWarningMonthsBefore: number;
+  installationMonthsPerUnit: number;
+  largePurchaseThreshold: Money;
+  requisitionDeliveryDelay: number;
+  requisitionDiscount: number;
+  installmentMonths: number;
+  eolFailureMultipliers: [number, number, number, number];
+  salvageValueRate: number;
+}
+
+export interface SoftwareModuleConfig {
+  eosWarningMonthsBefore: number;
+  eosSecurityMultipliers: {
+    quarter1: number;
+    quarter2: number;
+    quarter3plus: number;
+  };
+  eosComplianceScorePenalty: {
+    quarter1: number;
+    quarter2: number;
+    quarter3plus: number;
+  };
+  compliancePenaltyAmount: Money;
+}
+
+export interface ContractModuleConfig {
+  rfpResponseWindowMonths: number;
+  renewalNoticeMonths: number;
+  baseRFPsPerMonth: number;
+  maxMonthlyPenaltyCap: number;
+  churnProbabilities: {
+    dataBreachAndLate: number;
+    consecutiveSLABreach: number;
+    p1Over24Hours: number;
+    lowSatisfactionProlonged: number;
+    competitorOffer: number;
+  };
 }
 
 // ─── Time engine payloads ─────────────────────────────────────────────────────

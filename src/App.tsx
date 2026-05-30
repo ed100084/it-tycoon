@@ -4,6 +4,10 @@ import { GameLayout } from './components/GameLayout';
 import { GameEngine } from './game/core/GameEngine';
 import { TimeEngine } from './game/modules/TimeEngine';
 import { FinanceEngine } from './game/modules/FinanceEngine';
+import { FacilityManager } from './game/modules/FacilityManager';
+import { HardwareCatalog } from './game/modules/HardwareCatalog';
+import { SoftwareCatalog } from './game/modules/SoftwareCatalog';
+import { ContractManager } from './game/modules/ContractManager';
 import { DEFAULT_CONFIG } from './game/config/default.config';
 import { useUIStore } from './store/uiStore';
 
@@ -13,7 +17,11 @@ type Phase = 'boot' | 'game';
 const engine = new GameEngine(DEFAULT_CONFIG);
 engine
   .register(new TimeEngine())
-  .register(new FinanceEngine());
+  .register(new FinanceEngine())
+  .register(new FacilityManager())
+  .register(new HardwareCatalog())
+  .register(new SoftwareCatalog())
+  .register(new ContractManager());
 
 const App: React.FC = () => {
   const [phase, setPhase] = useState<Phase>('boot');
