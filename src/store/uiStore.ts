@@ -41,7 +41,10 @@ import type { ReputationEngine } from '../game/modules/ReputationEngine';
 import type {
   StaffMember, JobOpening, ShiftMode, Incident, TechNode, HistoricalEvent,
   GlobalModifier, EconomicCycleState, EventDecision,
+  Achievement, Competitor, ActiveRandomEvent, RegionMaintenanceState,
 } from '../game/core/types';
+import type { AchievementEngine } from '../game/modules/AchievementEngine';
+import type { CompetitorEngine } from '../game/modules/CompetitorEngine';
 
 export interface UIState {
   // Time
@@ -102,6 +105,19 @@ export interface UIState {
   // Tutorial
   tutorialStep: TutorialStep | null;
 
+  // Achievements
+  achievements: Achievement[];
+
+  // Competitors
+  competitors: Competitor[];
+  playerMarketShare: number;
+
+  // Random events (pending player decision)
+  activeRandomEvents: ActiveRandomEvent[];
+
+  // Maintenance
+  maintenanceStates: Record<FacilityRegion, RegionMaintenanceState> | null;
+
   // Engine ref (not reactive, just for actions)
   _engine: GameEngine | null;
 
@@ -126,6 +142,9 @@ export interface UIState {
   startTechResearch: (nodeId: string) => void;
   cancelTechResearch: (nodeId: string) => void;
   makeTimelineDecision: (decisionId: string, optionIndex: number) => void;
+  resolveRandomEvent: (instanceId: string, optionIndex: number) => void;
+  scheduleMaintenance: (region: FacilityRegion, offPeak: boolean) => void;
+  performGeneratorMaintenance: (region: FacilityRegion) => void;
   nextTutorialStep: () => void;
   skipTutorial: () => void;
   _connectEngine: (engine: GameEngine) => void;
@@ -170,6 +189,12 @@ export const useUIStore = create<UIState>((set, get) => ({
 
   plHistory: [],
   tutorialStep: null,
+
+  achievements: [],
+  competitors: [],
+  playerMarketShare: 0.40,
+  activeRandomEvents: [],
+  maintenanceStates: null,
 
   _engine: null,
 
@@ -323,6 +348,30 @@ export const useUIStore = create<UIState>((set, get) => ({
     set({ pendingDecisions: et.getPendingDecisions(), activeModifiers: et.getActiveModifiers() });
   },
 
+  resolveRandomEvent(instanceId, optionIndex) {
+    const engine = get()._engine;
+    if (!engine) return;
+    const et = engine.getModule<EventTimeline>('EventTimeline');
+    et.resolveRandomEvent(instanceId, optionIndex);
+    set({ activeRandomEvents: et.getActiveRandomEvents() });
+  },
+
+  scheduleMaintenance(region, offPeak) {
+    const engine = get()._engine;
+    if (!engine) return;
+    const fm = engine.getModule<FacilityManager>('FacilityManager');
+    fm.scheduleMaintenance(region, offPeak);
+    set({ maintenanceStates: fm.getAllMaintenanceStates() });
+  },
+
+  performGeneratorMaintenance(region) {
+    const engine = get()._engine;
+    if (!engine) return;
+    const fm = engine.getModule<FacilityManager>('FacilityManager');
+    fm.performGeneratorMaintenance(region);
+    set({ maintenanceStates: fm.getAllMaintenanceStates() });
+  },
+
   nextTutorialStep() {
     const engine = get()._engine;
     if (!engine) return;
@@ -352,6 +401,8 @@ export const useUIStore = create<UIState>((set, get) => ({
     const tt = engine.getModule<TechTree>('TechTree');
     const rep = engine.getModule<ReputationEngine>('ReputationEngine');
     const tutorial = engine.getModule<TutorialEngine>('TutorialEngine');
+    const ach = engine.getModule<AchievementEngine>('AchievementEngine');
+    const comp = engine.getModule<CompetitorEngine>('CompetitorEngine');
 
     set({
       _engine: engine,
@@ -382,10 +433,15 @@ export const useUIStore = create<UIState>((set, get) => ({
       triggeredEvents: et.getTriggeredEvents(),
       activeModifiers: et.getActiveModifiers(),
       pendingDecisions: et.getPendingDecisions(),
+      activeRandomEvents: et.getActiveRandomEvents(),
       economicCycle: et.getEconomicCycle(),
       techNodes: tt.getNodes(),
       satisfactionScore: rep.getSatisfactionScore(),
       plHistory: finance.getPLHistory(12),
+      achievements: ach.getAchievements(),
+      competitors: comp.getCompetitors(),
+      playerMarketShare: comp.getPlayerMarketShare(),
+      maintenanceStates: fm.getAllMaintenanceStates(),
     });
 
     // Start tutorial if not completed (after a brief delay so UI is mounted)
@@ -422,10 +478,43 @@ export const useUIStore = create<UIState>((set, get) => ({
         triggeredEvents: et.getTriggeredEvents(),
         activeModifiers: et.getActiveModifiers(),
         pendingDecisions: et.getPendingDecisions(),
+        activeRandomEvents: et.getActiveRandomEvents(),
         economicCycle: et.getEconomicCycle(),
         techNodes: tt.getNodes(),
         satisfactionScore: rep.getSatisfactionScore(),
+        achievements: ach.getAchievements(),
+        competitors: comp.getCompetitors(),
+        playerMarketShare: comp.getPlayerMarketShare(),
+        maintenanceStates: fm.getAllMaintenanceStates(),
       });
+    });
+
+    bus.subscribe('achievement.unlocked', () => {
+      set({ achievements: ach.getAchievements() });
+    });
+
+    bus.subscribe('competitor.state_changed', () => {
+      set({ competitors: comp.getCompetitors(), playerMarketShare: comp.getPlayerMarketShare() });
+    });
+
+    bus.subscribe('timeline.random_event', () => {
+      set({ activeRandomEvents: et.getActiveRandomEvents() });
+    });
+
+    bus.subscribe('timeline.random_event_resolved', () => {
+      set({ activeRandomEvents: et.getActiveRandomEvents() });
+    });
+
+    bus.subscribe('facility.maintenance_completed', () => {
+      set({ maintenanceStates: fm.getAllMaintenanceStates() });
+    });
+
+    bus.subscribe('facility.maintenance_scheduled', () => {
+      set({ maintenanceStates: fm.getAllMaintenanceStates() });
+    });
+
+    bus.subscribe('facility.generator_maintained', () => {
+      set({ maintenanceStates: fm.getAllMaintenanceStates() });
     });
 
     bus.subscribe('tutorial.step_triggered', () => {

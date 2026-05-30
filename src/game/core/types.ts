@@ -1159,3 +1159,77 @@ export interface TimeSpeedChangedPayload {
   from: GameSpeed;
   to: GameSpeed;
 }
+
+// ─── Achievement types ─────────────────────────────────────────────────────────
+
+export interface Achievement {
+  id: string;
+  name: string;
+  description: string;
+  icon: string;
+  unlockedAt: GameDate | null;
+  rewardReputation?: number;
+  rewardCash?: Money;
+}
+
+// ─── Competitor types ──────────────────────────────────────────────────────────
+
+export interface Competitor {
+  id: string;
+  name: string;
+  specialty: string;
+  marketShare: number;
+  pricingIndex: number;
+  techLevel: number;
+  reputation: number;
+  description: string;
+}
+
+// ─── Procurement types ────────────────────────────────────────────────────────
+
+export type ProcurementTier = 'direct' | 'approval' | 'bidding';
+
+// ─── Maintenance / facility runtime types ─────────────────────────────────────
+
+export interface RegionMaintenanceState {
+  lastMaintenanceDate: GameDate | null;
+  monthsSinceMaintenance: number;
+  maintenanceDue: boolean;
+  isUnderMaintenance: boolean;
+  maintenanceCompletesAt: GameDate | null;
+  generatorLastMaintenance: GameDate | null;
+  generatorMonthsSinceMaintenance: number;
+  generatorMaintenanceDue: boolean;
+  generatorHealthy: boolean;
+  peakSeasonActive: boolean;
+}
+
+// ─── Random event types ───────────────────────────────────────────────────────
+
+export interface RandomGameEvent {
+  id: string;
+  name: string;
+  description: string;
+  icon: string;
+  options: Array<{
+    label: string;
+    description: string;
+    effects: EventEffect[];
+  }>;
+  defaultOptionIndex: number;
+  decisionWindowMonths: number;
+}
+
+export interface ActiveRandomEvent {
+  id: string;
+  instanceId: string;
+  name: string;
+  description: string;
+  icon: string;
+  options: Array<{ label: string; description: string; effects: EventEffect[] }>;
+  defaultOptionIndex: number;
+  triggeredAt: GameDate;
+  expiresAt: GameDate;
+  isExpired: boolean;
+  decidedOptionIndex: number | null;
+}

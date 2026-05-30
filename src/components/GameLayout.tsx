@@ -61,12 +61,18 @@ export const GameLayout: React.FC = () => {
     staffList, jobOpenings, shiftMode, monthlyPayroll,
     activeIncidents, securityPostureScore, securityComplianceScore,
     triggeredEvents, activeModifiers, pendingDecisions, economicCycle,
+    activeRandomEvents,
     techNodes,
     satisfactionScore,
+    achievements,
+    competitors,
+    playerMarketShare,
+    maintenanceStates,
     isPaused,
     postJobOpening, hireStaff, layoffStaff,
     startTechResearch, cancelTechResearch,
-    makeTimelineDecision,
+    makeTimelineDecision, resolveRandomEvent,
+    scheduleMaintenance, performGeneratorMaintenance,
     setSpeed,
   } = useUIStore();
 
@@ -184,6 +190,54 @@ export const GameLayout: React.FC = () => {
         pushEventLog(e, `⚠ 客戶滿意度警告：${p.score.toFixed(0)}`, 'var(--accent-red)');
         addToast('error', `客戶滿意度過低：${p.score.toFixed(0)}`);
       }),
+      bus.subscribe('achievement.unlocked', (e) => {
+        const p = e.payload as { name: string; icon: string; description: string };
+        pushEventLog(e, `🏆 成就解鎖：${p.icon} ${p.name}`, 'var(--tm-green, #44ff88)');
+        addToast('success', `🏆 成就解鎖：${p.icon} ${p.name}`, 5000);
+        showModal({
+          title: `🏆 成就解鎖！`,
+          body: `${p.icon} **${p.name}**\n${p.description}`,
+          severity: 'info',
+        });
+      }),
+      bus.subscribe('timeline.random_event', (e) => {
+        const ev = e.payload as { name: string; description: string; icon: string };
+        pushEventLog(e, `${ev.icon} 隨機事件：${ev.name}`, 'var(--accent-purple)');
+        setCenterTab('timeline');
+        setSpeed(0);
+        showModal({
+          title: `${ev.icon} 隨機事件：${ev.name}`,
+          body: ev.description,
+          severity: 'warning',
+        });
+        addToast('warning', `${ev.icon} 隨機事件：${ev.name} — 請前往時間軸面板決策`);
+      }),
+      bus.subscribe('facility.maintenance_due', (e) => {
+        const p = e.payload as { region: string };
+        pushEventLog(e, `🔧 ${p.region} 需要例行維護`, 'var(--accent-yellow)');
+        addToast('warning', `機房 ${p.region} 需要例行維護`);
+      }),
+      bus.subscribe('facility.power_outage', (e) => {
+        const p = e.payload as { region: string; durationHours: number };
+        pushEventLog(e, `⚡ 颱風停電：${p.region} (${p.durationHours}小時)`, 'var(--accent-red)');
+        setSpeed(0);
+        showModal({
+          title: '⚡ 停電警告',
+          body: `${p.region} 因颱風停電，預計停電 ${p.durationHours} 小時。SLA 違約不可避免。`,
+          severity: 'critical',
+        });
+        addToast('error', `⚡ ${p.region} 停電 ${p.durationHours} 小時！`, 6000);
+      }),
+      bus.subscribe('facility.typhoon_event', (e) => {
+        const p = e.payload as { region: string; generatorHealthy: boolean };
+        if (!p.generatorHealthy) {
+          pushEventLog(e, `🌀 颱風警報：${p.region} 油機異常，停電風險！`, 'var(--accent-red)');
+          addToast('error', `🌀 ${p.region} 颱風 + 油機異常，請立即保養！`, 6000);
+        } else {
+          pushEventLog(e, `🌀 颱風警報：${p.region} — 油機正常保護`, 'var(--accent-yellow)');
+          addToast('warning', `🌀 颱風警報：${p.region}`);
+        }
+      }),
     ];
     return () => unsubs.forEach(u => u());
   }, [_engine, addToast, showModal, setSpeed]);
@@ -249,8 +303,8 @@ export const GameLayout: React.FC = () => {
                 {tab === 'security' && activeIncidents.length > 0 && (
                   <span className="tab-badge danger">{activeIncidents.length}</span>
                 )}
-                {tab === 'timeline' && pendingDecisions.length > 0 && (
-                  <span className="tab-badge warn">!</span>
+                {tab === 'timeline' && (pendingDecisions.length > 0 || activeRandomEvents.length > 0) && (
+                  <span className="tab-badge warn">{pendingDecisions.length + activeRandomEvents.length}</span>
                 )}
                 {tab === 'contract' && pendingRFPs.length > 0 && (
                   <span className="tab-badge info">{pendingRFPs.length}</span>
@@ -269,9 +323,12 @@ export const GameLayout: React.FC = () => {
             {centerTab === 'facility' && (
               <FacilityManagerPanel
                 regions={facilityRegions}
+                maintenanceStates={maintenanceStates}
                 onUpgradeCooling={upgradeCooling}
                 onExpandCapacity={expandCapacity}
                 onUnlockRegion={unlockRegion}
+                onScheduleMaintenance={scheduleMaintenance}
+                onGeneratorMaintenance={performGeneratorMaintenance}
               />
             )}
             {centerTab === 'hardware' && (
@@ -326,8 +383,10 @@ export const GameLayout: React.FC = () => {
                 triggeredEvents={triggeredEvents}
                 activeModifiers={activeModifiers}
                 pendingDecisions={pendingDecisions}
+                activeRandomEvents={activeRandomEvents}
                 economicCycle={economicCycle}
                 onMakeDecision={makeTimelineDecision}
+                onResolveRandomEvent={resolveRandomEvent}
               />
             )}
             {centerTab === 'techtree' && (
@@ -338,7 +397,12 @@ export const GameLayout: React.FC = () => {
               />
             )}
             {centerTab === 'reputation' && (
-              <ReputationPanel satisfactionScore={satisfactionScore} />
+              <ReputationPanel
+                satisfactionScore={satisfactionScore}
+                achievements={achievements}
+                competitors={competitors}
+                playerMarketShare={playerMarketShare}
+              />
             )}
           </div>
         </section>

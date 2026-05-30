@@ -14,7 +14,20 @@ import type {
   IEventBus,
   IGameModule,
   Money,
+  RegionMaintenanceState,
 } from '../core/types';
+
+// ─── Seeded RNG ───────────────────────────────────────────────────────────────
+
+let _fmSeed = 500;
+function fmRand(): number {
+  const x = Math.sin(_fmSeed++ * 9301 + 49297) * 233280;
+  return x - Math.floor(x);
+}
+
+const MAINTENANCE_INTERVAL_MONTHS = 6;
+const GENERATOR_MAINTENANCE_INTERVAL_MONTHS = 3;
+const TYPHOON_OUTAGE_PROBABILITY_NO_MAINT = 0.30;
 
 // ─── Default config fallback ──────────────────────────────────────────────────
 
@@ -61,12 +74,29 @@ const DEFAULT_FACILITY_CONFIG: FacilityModuleConfig = {
 
 // ─── Internal state ───────────────────────────────────────────────────────────
 
+function defaultMaintenanceState(): RegionMaintenanceState {
+  return {
+    lastMaintenanceDate: null,
+    monthsSinceMaintenance: 0,
+    maintenanceDue: false,
+    isUnderMaintenance: false,
+    maintenanceCompletesAt: null,
+    generatorLastMaintenance: null,
+    generatorMonthsSinceMaintenance: 0,
+    generatorMaintenanceDue: false,
+    generatorHealthy: true,
+    peakSeasonActive: false,
+  };
+}
+
 interface FacilityManagerState {
   regions: Record<FacilityRegion, FacilityRegionState>;
+  maintenanceStates: Record<FacilityRegion, RegionMaintenanceState>;
   globalPUEBonus: number;
   econElecMod: number;
   geoRedundancyActive: boolean;
   lastMonthlyRevenue: Money;
+  peakSeasonPUEMod: number;
 }
 
 function getElectricityRate(
@@ -114,10 +144,12 @@ export class FacilityManager implements IGameModule {
 
   private state: FacilityManagerState = {
     regions: {} as Record<FacilityRegion, FacilityRegionState>,
+    maintenanceStates: {} as Record<FacilityRegion, RegionMaintenanceState>,
     globalPUEBonus: 0,
     econElecMod: 1.0,
     geoRedundancyActive: false,
     lastMonthlyRevenue: 0,
+    peakSeasonPUEMod: 0,
   };
 
   init(bus: IEventBus, config: GameConfig): void {
@@ -127,6 +159,7 @@ export class FacilityManager implements IGameModule {
 
     for (const region of Object.values(FacilityRegion)) {
       this.state.regions[region] = makeFacilityRegionState(region, this.cfg);
+      this.state.maintenanceStates[region] = defaultMaintenanceState();
     }
 
     bus.subscribe('time.month_end', (e) => {
@@ -161,14 +194,128 @@ export class FacilityManager implements IGameModule {
   // ── Private helpers ───────────────────────────────────────────────
 
   private onMonthEnd(): void {
+    this.updatePeakSeason();
     for (const region of Object.values(FacilityRegion)) {
       const r = this.state.regions[region];
       if (!r.isUnlocked) continue;
+      this.tickMaintenance(region);
+      this.checkTyphoon(region);
       this.emitElectricityDue(region);
       this.emitRentDue(region);
       this.checkCapacityWarning(region);
     }
     this.updateGeoRedundancy();
+  }
+
+  private updatePeakSeason(): void {
+    const month = this.currentDate.month;
+    const inPeak = month >= 6 && month <= 9;
+    this.state.peakSeasonPUEMod = inPeak ? 0.1 : 0;
+    for (const region of Object.values(FacilityRegion)) {
+      const maint = this.state.maintenanceStates[region];
+      maint.peakSeasonActive = inPeak;
+    }
+  }
+
+  private tickMaintenance(region: FacilityRegion): void {
+    const maint = this.state.maintenanceStates[region];
+
+    // Tick maintenance counters
+    maint.monthsSinceMaintenance++;
+    maint.generatorMonthsSinceMaintenance++;
+
+    // Complete scheduled maintenance
+    if (maint.isUnderMaintenance && maint.maintenanceCompletesAt) {
+      const done =
+        this.currentDate.year > maint.maintenanceCompletesAt.year ||
+        (this.currentDate.year === maint.maintenanceCompletesAt.year &&
+          this.currentDate.month >= maint.maintenanceCompletesAt.month);
+      if (done) {
+        maint.isUnderMaintenance = false;
+        maint.maintenanceCompletesAt = null;
+        maint.lastMaintenanceDate = { ...this.currentDate };
+        maint.monthsSinceMaintenance = 0;
+        maint.maintenanceDue = false;
+        this.bus.publish({
+          type: 'facility.maintenance_completed',
+          payload: { region },
+          gameDate: this.currentDate,
+          source: this.moduleId,
+        });
+      }
+    }
+
+    // Check if maintenance is due
+    if (maint.monthsSinceMaintenance >= MAINTENANCE_INTERVAL_MONTHS) {
+      maint.maintenanceDue = true;
+      this.bus.publish({
+        type: 'facility.maintenance_due',
+        payload: { region, monthsOverdue: maint.monthsSinceMaintenance - MAINTENANCE_INTERVAL_MONTHS },
+        gameDate: this.currentDate,
+        source: this.moduleId,
+      });
+      // Overdue: double failure rate signal
+      if (maint.monthsSinceMaintenance > MAINTENANCE_INTERVAL_MONTHS) {
+        this.bus.publish({
+          type: 'facility.maintenance_overdue',
+          payload: { region, failureRateMod: 2.0 },
+          gameDate: this.currentDate,
+          source: this.moduleId,
+        });
+      }
+    }
+
+    // Generator maintenance due
+    if (maint.generatorMonthsSinceMaintenance >= GENERATOR_MAINTENANCE_INTERVAL_MONTHS) {
+      maint.generatorMaintenanceDue = true;
+      if (!maint.generatorHealthy) return; // already degraded
+      // Small chance generator degrades if overdue
+      if (maint.generatorMonthsSinceMaintenance > GENERATOR_MAINTENANCE_INTERVAL_MONTHS + 1) {
+        maint.generatorHealthy = false;
+      }
+    }
+  }
+
+  private checkTyphoon(region: FacilityRegion): void {
+    // Typhoon season: July–October
+    const month = this.currentDate.month;
+    if (month < 7 || month > 10) return;
+
+    // Only affects high climate risk regions (South) most heavily
+    const r = this.state.regions[region];
+    const baseProbability = r.climateRisk === 'HIGH' ? 0.12 : r.climateRisk === 'MEDIUM' ? 0.06 : 0.02;
+    if (fmRand() > baseProbability) return;
+
+    const maint = this.state.maintenanceStates[region];
+    const outageProbability = maint.generatorHealthy ? 0.0 : TYPHOON_OUTAGE_PROBABILITY_NO_MAINT;
+
+    this.bus.publish({
+      type: 'facility.typhoon_event',
+      payload: {
+        region,
+        outageProbability,
+        generatorHealthy: maint.generatorHealthy,
+        month,
+      },
+      gameDate: this.currentDate,
+      source: this.moduleId,
+    });
+
+    if (fmRand() < outageProbability) {
+      // Power outage
+      this.bus.publish({
+        type: 'facility.power_outage',
+        payload: { region, durationHours: 2 + Math.floor(fmRand() * 6) },
+        gameDate: this.currentDate,
+        source: this.moduleId,
+      });
+      this.bus.publish({
+        type: 'reputation.modifier_added',
+        payload: { delta: -10, description: '颱風停電事件', isOneTime: true, source: 'typhoon' },
+        gameDate: this.currentDate,
+        source: this.moduleId,
+      });
+    }
   }
 
   private emitElectricityDue(region: FacilityRegion): void {
@@ -283,13 +430,103 @@ export class FacilityManager implements IGameModule {
   private computePUE(region: FacilityRegion): number {
     const level = this.state.regions[region].coolingLevel;
     const basePUE = this.cfg.coolingLevels[level].pue;
-    return Math.max(1.0, basePUE - this.state.globalPUEBonus);
+    return Math.max(1.0, basePUE - this.state.globalPUEBonus + this.state.peakSeasonPUEMod);
   }
 
   // ── Public API ────────────────────────────────────────────────────
 
   getRegions(): FacilityRegionState[] {
     return Object.values(this.state.regions);
+  }
+
+  getMaintenanceState(region: FacilityRegion): RegionMaintenanceState {
+    return { ...this.state.maintenanceStates[region] };
+  }
+
+  getAllMaintenanceStates(): Record<FacilityRegion, RegionMaintenanceState> {
+    const out = {} as Record<FacilityRegion, RegionMaintenanceState>;
+    for (const r of Object.values(FacilityRegion)) {
+      out[r] = { ...this.state.maintenanceStates[r] };
+    }
+    return out;
+  }
+
+  /** Schedule routine maintenance for a region. offPeak = schedule during weekend/night hours. */
+  scheduleMaintenance(region: FacilityRegion, offPeak = false): boolean {
+    const r = this.state.regions[region];
+    if (!r?.isUnlocked) return false;
+    const maint = this.state.maintenanceStates[region];
+    if (maint.isUnderMaintenance) return false;
+
+    maint.isUnderMaintenance = true;
+    maint.maintenanceCompletesAt = {
+      year: this.currentDate.month === 12 ? this.currentDate.year + 1 : this.currentDate.year,
+      month: this.currentDate.month === 12 ? 1 : this.currentDate.month + 1,
+    };
+
+    // Cost: base maintenance cost (1% of monthly rent)
+    const baseCost = Math.round(r.monthlyRent * 0.01);
+    const cost = offPeak ? Math.round(baseCost * 1.5) : baseCost;
+
+    this.bus.publish({
+      type: 'facility.maintenance_scheduled',
+      payload: { region, offPeak, cost },
+      gameDate: this.currentDate,
+      source: this.moduleId,
+    });
+
+    if (cost > 0) {
+      this.bus.publish({
+        type: 'finance.expense_requested',
+        payload: {
+          category: ExpenseCategory.Maintenance,
+          amount: cost,
+          date: this.currentDate,
+          description: `Routine maintenance — ${region}${offPeak ? ' (off-peak)' : ''}`,
+          isCashExpense: true,
+        },
+        gameDate: this.currentDate,
+        source: this.moduleId,
+      });
+    }
+    return true;
+  }
+
+  /** Perform generator maintenance (quarterly recommended). */
+  performGeneratorMaintenance(region: FacilityRegion): boolean {
+    const r = this.state.regions[region];
+    if (!r?.isUnlocked) return false;
+    const maint = this.state.maintenanceStates[region];
+
+    maint.generatorHealthy = true;
+    maint.generatorLastMaintenance = { ...this.currentDate };
+    maint.generatorMonthsSinceMaintenance = 0;
+    maint.generatorMaintenanceDue = false;
+
+    const cost = 15_000;
+    this.bus.publish({
+      type: 'facility.generator_maintained',
+      payload: { region },
+      gameDate: this.currentDate,
+      source: this.moduleId,
+    });
+    this.bus.publish({
+      type: 'finance.expense_requested',
+      payload: {
+        category: ExpenseCategory.Maintenance,
+        amount: cost,
+        date: this.currentDate,
+        description: `Generator maintenance — ${region}`,
+        isCashExpense: true,
+      },
+      gameDate: this.currentDate,
+      source: this.moduleId,
+    });
+    return true;
+  }
+
+  getPeakSeasonPUEMod(): number {
+    return this.state.peakSeasonPUEMod;
   }
 
   getRegion(region: FacilityRegion): FacilityRegionState | null {
@@ -441,10 +678,12 @@ export class FacilityManager implements IGameModule {
   serialize(): Record<string, unknown> {
     return {
       regions: this.state.regions,
+      maintenanceStates: this.state.maintenanceStates,
       globalPUEBonus: this.state.globalPUEBonus,
       econElecMod: this.state.econElecMod,
       geoRedundancyActive: this.state.geoRedundancyActive,
       lastMonthlyRevenue: this.state.lastMonthlyRevenue,
+      peakSeasonPUEMod: this.state.peakSeasonPUEMod,
       currentDate: this.currentDate,
     };
   }
@@ -453,11 +692,19 @@ export class FacilityManager implements IGameModule {
     const s = raw as unknown as FacilityManagerState & { currentDate: GameDate };
     this.state = {
       regions: s.regions,
+      maintenanceStates: (s.maintenanceStates as Record<FacilityRegion, RegionMaintenanceState>) ?? this.state.maintenanceStates,
       globalPUEBonus: s.globalPUEBonus,
       econElecMod: s.econElecMod,
       geoRedundancyActive: s.geoRedundancyActive,
       lastMonthlyRevenue: s.lastMonthlyRevenue,
+      peakSeasonPUEMod: s.peakSeasonPUEMod ?? 0,
     };
+    // Ensure maintenance states exist for all regions
+    for (const region of Object.values(FacilityRegion)) {
+      if (!this.state.maintenanceStates[region]) {
+        this.state.maintenanceStates[region] = defaultMaintenanceState();
+      }
+    }
     if (s.currentDate) this.currentDate = s.currentDate;
   }
 

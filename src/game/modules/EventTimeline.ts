@@ -1,6 +1,7 @@
 import { addMonths } from '../../utils/gameDate';
 import { EconomicCycle, EventEffectType, IncidentType } from '../core/types';
 import type {
+  ActiveRandomEvent,
   DecisionOutcome,
   EconomicCycleState,
   EntityId,
@@ -13,6 +14,7 @@ import type {
   HistoricalEvent,
   IEventBus,
   IGameModule,
+  RandomGameEvent,
 } from '../core/types';
 
 // ─── Seeded random ─────────────────────────────────────────────────────────────
@@ -478,12 +480,183 @@ function buildHistoricalEvents(): HistoricalEvent[] {
   ];
 }
 
+// ─── Random event pool ────────────────────────────────────────────────────────
+
+function buildRandomEventPool(): RandomGameEvent[] {
+  return [
+    {
+      id: 'CLIENT_EXPANSION',
+      name: '客戶擴容需求',
+      description: '某大型客戶要求 3 個月內擴容 2 倍。接受可獲得獎金，拒絕有流失風險。',
+      icon: '📦',
+      options: [
+        {
+          label: '接受擴容',
+          description: '立即安排擴容計畫，獲得額外 NT$30 萬獎金。',
+          effects: [fx(EventEffectType.ContractValueMod, 1.1, true, '接受擴容：合約價值+10%', 'contract')],
+        },
+        {
+          label: '婉拒',
+          description: '因產能不足婉拒，客戶可能轉向競爭對手。',
+          effects: [fx(EventEffectType.RFPFrequencyMod, 0.85, true, '婉拒擴容：客戶流失風險')],
+        },
+      ],
+      defaultOptionIndex: 1,
+      decisionWindowMonths: 2,
+    },
+    {
+      id: 'COMPETITOR_BANKRUPT',
+      name: '競爭對手倒閉',
+      description: '一家競爭對手宣布停業，市場上新增 3 個潛在客戶 RFP！',
+      icon: '📉',
+      options: [
+        {
+          label: '積極搶市',
+          description: '立即擴大銷售力度，爭取脫困客戶。',
+          effects: [fx(EventEffectType.RFPFrequencyMod, 1.5, true, '競爭對手倒閉：RFP 機會+50%', 'global')],
+        },
+        {
+          label: '靜觀其變',
+          description: '保守應對，保持現有服務品質。',
+          effects: [fx(EventEffectType.RFPFrequencyMod, 1.2, true, '競爭對手倒閉：自然擴散+20%', 'global')],
+        },
+      ],
+      defaultOptionIndex: 0,
+      decisionWindowMonths: 1,
+    },
+    {
+      id: 'KEY_ENG_POACHED',
+      name: '關鍵工程師被挖角',
+      description: '競爭對手開出優渥薪資，公司一名資深工程師考慮跳槽。',
+      icon: '👋',
+      options: [
+        {
+          label: '提供加薪留才',
+          description: '立即薪資提升 20%，留住人才。',
+          effects: [fx(EventEffectType.StaffEfficiencyMod, 1.05, true, '留才加薪：效率微升', 'staff')],
+        },
+        {
+          label: '接受離職',
+          description: '祝福員工，重新招募。',
+          effects: [fx(EventEffectType.ResignationRateMod, 1.3, true, '人才流失：士氣稍降', 'staff')],
+        },
+      ],
+      defaultOptionIndex: 0,
+      decisionWindowMonths: 1,
+    },
+    {
+      id: 'GOV_TENDER',
+      name: '政府標案機會',
+      description: '政府釋出大型 IT 服務採購標案，要求合規分數 > 80 才可投標。',
+      icon: '🏛️',
+      options: [
+        {
+          label: '積極準備投標',
+          description: '投入資源準備標案，若合規達標可獲得大型合約。',
+          effects: [fx(EventEffectType.RFPFrequencyMod, 1.4, true, '政府標案：RFP 機會大增', 'global')],
+        },
+        {
+          label: '放棄此次標案',
+          description: '專注現有客戶，下次再爭取。',
+          effects: [],
+        },
+      ],
+      defaultOptionIndex: 0,
+      decisionWindowMonths: 2,
+    },
+    {
+      id: 'HW_RECALL',
+      name: '設備召回通知',
+      description: '某品牌硬體發現瑕疵，廠商提供免費更換，但需安排停機維護。',
+      icon: '⚠️',
+      options: [
+        {
+          label: '立即配合更換',
+          description: '安排設備停機更換，短期影響 SLA。',
+          effects: [fx(EventEffectType.StaffEfficiencyMod, 0.90, true, '停機更換：員工負荷+', 'staff')],
+        },
+        {
+          label: '延後處理',
+          description: '暫緩更換，維持服務，但保留硬體隱患。',
+          effects: [fx(EventEffectType.ThreatLevelMod, 1.2, true, '延後處理：硬體風險微升', 'security')],
+        },
+      ],
+      defaultOptionIndex: 0,
+      decisionWindowMonths: 2,
+    },
+    {
+      id: 'ELECTRICITY_HIKE',
+      name: '電費調漲',
+      description: '台電公告調漲電費，未來 12 個月電力成本增加 15%。',
+      icon: '⚡',
+      options: [
+        {
+          label: '簽訂節能方案',
+          description: '導入節能措施，抵消部分漲幅。',
+          effects: [fx(EventEffectType.ElectricityMod, 1.08, true, '電費+8%（節能抵消）', 'facility')],
+        },
+        {
+          label: '接受漲幅',
+          description: '吸收成本，考慮未來轉嫁客戶。',
+          effects: [fx(EventEffectType.ElectricityMod, 1.15, true, '電費調漲+15%', 'facility')],
+        },
+      ],
+      defaultOptionIndex: 0,
+      decisionWindowMonths: 1,
+    },
+    {
+      id: 'INTERN_ARRIVAL',
+      name: '實習生報到',
+      description: '頂尖大學推薦一名優秀實習生加入 NOC 團隊，免費服務 6 個月！',
+      icon: '🎓',
+      options: [
+        {
+          label: '熱烈歡迎',
+          description: '安排專業導師，提升效率並培養人才。',
+          effects: [fx(EventEffectType.StaffEfficiencyMod, 1.05, true, '實習生：團隊效率微升', 'staff')],
+        },
+        {
+          label: '婉拒',
+          description: '目前人力配置已足，感謝推薦。',
+          effects: [],
+        },
+      ],
+      defaultOptionIndex: 0,
+      decisionWindowMonths: 1,
+    },
+    {
+      id: 'MEDIA_INTERVIEW',
+      name: '媒體採訪邀請',
+      description: '知名科技媒體邀請公司接受採訪報導，聲譽大幅提升但需一個月準備。',
+      icon: '📺',
+      options: [
+        {
+          label: '接受採訪',
+          description: '全力準備採訪，聲譽顯著提升。',
+          effects: [
+            fx(EventEffectType.RFPFrequencyMod, 1.15, true, '媒體曝光：RFP 機會+15%'),
+            fx(EventEffectType.StaffEfficiencyMod, 0.95, true, '準備採訪：員工分心', 'staff'),
+          ],
+        },
+        {
+          label: '婉謝',
+          description: '專注營運，不接受此次採訪。',
+          effects: [],
+        },
+      ],
+      defaultOptionIndex: 0,
+      decisionWindowMonths: 1,
+    },
+  ];
+}
+
 // ─── Internal state ────────────────────────────────────────────────────────────
 
 interface EventTimelineState {
   historicalEvents: HistoricalEvent[];
   activeModifiers: GlobalModifier[];
   pendingDecisions: EventDecision[];
+  activeRandomEvents: ActiveRandomEvent[];
   economicCycle: EconomicCycleState;
   randomEventCooldown: number;
   inflationRate: number;
@@ -506,6 +679,7 @@ export class EventTimeline implements IGameModule {
     historicalEvents: buildHistoricalEvents(),
     activeModifiers: [],
     pendingDecisions: [],
+    activeRandomEvents: [],
     economicCycle: {
       current: EconomicCycle.Normal,
       monthsInCurrentPhase: 0,
@@ -518,6 +692,8 @@ export class EventTimeline implements IGameModule {
     baseExchangeRate: 30.0,
     exchangeRateMod: 1.0,
   };
+
+  private readonly randomEventPool: RandomGameEvent[] = buildRandomEventPool();
 
   // ─── IGameModule ─────────────────────────────────────────────────────────────
 
@@ -548,6 +724,7 @@ export class EventTimeline implements IGameModule {
     this.state.historicalEvents = s.historicalEvents ?? buildHistoricalEvents();
     this.state.activeModifiers = s.activeModifiers ?? [];
     this.state.pendingDecisions = s.pendingDecisions ?? [];
+    this.state.activeRandomEvents = s.activeRandomEvents ?? [];
     this.state.economicCycle = s.economicCycle ?? this.state.economicCycle;
     this.state.randomEventCooldown = s.randomEventCooldown ?? 3;
     this.state.inflationRate = s.inflationRate ?? this.cfg.baseInflationRate;
@@ -633,6 +810,28 @@ export class EventTimeline implements IGameModule {
     return outcome;
   }
 
+  getActiveRandomEvents(): ActiveRandomEvent[] {
+    return [...this.state.activeRandomEvents];
+  }
+
+  resolveRandomEvent(instanceId: string, optionIndex: number): void {
+    const idx = this.state.activeRandomEvents.findIndex(e => e.instanceId === instanceId);
+    if (idx === -1) return;
+    const event = this.state.activeRandomEvents[idx];
+    event.decidedOptionIndex = optionIndex;
+    const option = event.options[optionIndex];
+    if (option) {
+      this._applyEffects(instanceId, option.effects, 3);
+    }
+    this.state.activeRandomEvents.splice(idx, 1);
+    this.bus.publish({
+      type: 'timeline.random_event_resolved',
+      payload: { instanceId, eventId: event.id, optionIndex, optionLabel: option?.label ?? '' },
+      gameDate: this.currentDate,
+      source: this.moduleId,
+    });
+  }
+
   getRandomEventCooldown(): number {
     return this.state.randomEventCooldown;
   }
@@ -669,6 +868,7 @@ export class EventTimeline implements IGameModule {
     this._checkHistoricalEvents();
     this._expireModifiers();
     this._expireDecisions();
+    this._expireRandomEvents();
     this._advanceEconomicCycle();
     this._updateExchangeRate();
     this._tickRandomEventCooldown();
@@ -915,30 +1115,58 @@ export class EventTimeline implements IGameModule {
   }
 
   private _rollRandomEvents(): void {
-    const roll = seededRand();
-    if (roll < 0.3) {
-      const durationMonths = 3 + Math.floor(seededRand() * 4);
-      this.bus.publish({
-        type: 'timeline.rfp_boost',
-        payload: { mod: 1.2 + seededRand() * 0.3, durationMonths },
-        gameDate: this.currentDate,
-        source: this.moduleId,
-      });
-    } else if (roll < 0.5) {
-      this.bus.publish({
-        type: 'timeline.talent_war',
-        payload: { durationMonths: 2 + Math.floor(seededRand() * 3) },
-        gameDate: this.currentDate,
-        source: this.moduleId,
-      });
-    } else if (roll < 0.65) {
-      this.bus.publish({
-        type: 'timeline.electricity_rate_changed',
-        payload: { mod: 1.1 + seededRand() * 0.2 },
-        gameDate: this.currentDate,
-        source: this.moduleId,
-      });
-    }
+    // 15% chance to trigger a random event from the pool
+    if (seededRand() > 0.15) return;
+
+    // Pick a random event from the pool (avoid duplicates already active)
+    const activeIds = new Set(this.state.activeRandomEvents.map(e => e.id));
+    const available = this.randomEventPool.filter(e => !activeIds.has(e.id));
+    if (available.length === 0) return;
+
+    const idx = Math.floor(seededRand() * available.length);
+    const tpl = available[idx];
+    const instanceId = `${tpl.id}_${this.currentDate.year}_${this.currentDate.month}`;
+    const expiresAt = addMonths(this.currentDate, tpl.decisionWindowMonths);
+
+    const activeEvent: ActiveRandomEvent = {
+      id: tpl.id,
+      instanceId,
+      name: tpl.name,
+      description: tpl.description,
+      icon: tpl.icon,
+      options: tpl.options,
+      defaultOptionIndex: tpl.defaultOptionIndex,
+      triggeredAt: { ...this.currentDate },
+      expiresAt,
+      isExpired: false,
+      decidedOptionIndex: null,
+    };
+    this.state.activeRandomEvents.push(activeEvent);
+
+    this.bus.publish({
+      type: 'timeline.random_event',
+      payload: activeEvent,
+      gameDate: this.currentDate,
+      source: this.moduleId,
+    });
+  }
+
+  private _expireRandomEvents(): void {
+    this.state.activeRandomEvents = this.state.activeRandomEvents.filter(e => {
+      const expired =
+        this.currentDate.year > e.expiresAt.year ||
+        (this.currentDate.year === e.expiresAt.year && this.currentDate.month >= e.expiresAt.month);
+      if (expired && e.decidedOptionIndex === null) {
+        e.isExpired = true;
+        // Apply default option effects
+        const defaultOpt = e.options[e.defaultOptionIndex];
+        if (defaultOpt) {
+          this._applyEffects(e.instanceId, defaultOpt.effects, 3);
+        }
+        return false;
+      }
+      return !expired;
+    });
   }
 
   private _rollCooldown(): number {
