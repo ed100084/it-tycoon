@@ -28,6 +28,7 @@ const STATUS_COLORS: Record<AssetStatus, string> = {
 export const HardwareCatalogPanel: React.FC<Props> = ({
   availableModels,
   assets,
+  currentYear,
   onPurchase,
   onDispose,
 }) => {
@@ -70,28 +71,38 @@ export const HardwareCatalogPanel: React.FC<Props> = ({
       {tab === 'catalog' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
           <div style={{ maxHeight: 240, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 4 }}>
-            {availableModels.map(model => (
-              <div
-                key={model.id}
-                onClick={() => setSelectedModel(model.id === selectedModel ? null : model.id)}
-                style={{
-                  padding: '6px 8px', borderRadius: 4, cursor: 'pointer',
-                  border: `1px solid ${model.id === selectedModel ? '#4488cc' : '#444'}`,
-                  background: model.id === selectedModel ? '#1a2a3a' : '#11151a',
-                  fontSize: 12,
-                }}
-              >
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ color: '#ddd' }}>{model.name}</span>
-                  <span style={{ color: '#aaffaa' }}>NT${model.pricing.basePriceNTD.toLocaleString()}</span>
+            {availableModels.map(model => {
+              const isEolModel = currentYear > model.eolYear;
+              return (
+                <div
+                  key={model.id}
+                  onClick={() => setSelectedModel(model.id === selectedModel ? null : model.id)}
+                  style={{
+                    padding: '6px 8px', borderRadius: 4, cursor: 'pointer',
+                    border: `1px solid ${model.id === selectedModel ? '#4488cc' : isEolModel ? '#664422' : '#444'}`,
+                    background: model.id === selectedModel ? '#1a2a3a' : isEolModel ? '#1a1208' : '#11151a',
+                    fontSize: 12,
+                  }}
+                >
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ color: isEolModel ? '#cc8855' : '#ddd' }}>{model.name}</span>
+                    <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                      {isEolModel && (
+                        <span style={{ fontSize: 10, color: '#ff8844', background: '#3a1a0a', padding: '1px 5px', borderRadius: 3 }}>
+                          EOL ×2維護費
+                        </span>
+                      )}
+                      <span style={{ color: '#aaffaa' }}>NT${model.pricing.basePriceNTD.toLocaleString()}</span>
+                    </div>
+                  </div>
+                  <div style={{ color: '#888', fontSize: 11, marginTop: 2 }}>
+                    {model.specs.rackUnits}U · {model.specs.powerWatts}W · EOL {model.eolYear}
+                    {model.isODM && ' · ODM-25%'}
+                    {model.isPremium && ' · Premium+25%'}
+                  </div>
                 </div>
-                <div style={{ color: '#888', fontSize: 11, marginTop: 2 }}>
-                  {model.specs.rackUnits}U · {model.specs.powerWatts}W · EOL {model.eolYear}
-                  {model.isODM && ' · ODM-25%'}
-                  {model.isPremium && ' · Premium+25%'}
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
 
           {selectedModel && (

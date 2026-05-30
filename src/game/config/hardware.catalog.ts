@@ -249,13 +249,171 @@ const ERA1_UPS: HardwareModel[] = [
   },
 ];
 
-// ─── Full catalog (all eras combined for now) ─────────────────────────────────
+// ─── Era 2: 2005–2009 ────────────────────────────────────────────────────────
+
+const ERA2_SERVERS: HardwareModel[] = [
+  {
+    id: 'DELL_PE1950',
+    name: 'Dell PowerEdge 1950',
+    category: HardwareCategory.Server,
+    era: 2, unlockYear: 2006, eolYear: 2013,
+    specs: { rackUnits: 1, powerWatts: 380, serviceCapacity: 50, capacityUnit: CapacityUnit.VPS },
+    pricing: { basePriceNTD: 174_000, maintenanceRatePerYear: 0.08, warrantyYears: 3 },
+    brand: HardwareBrand.Dell, isODM: false, isPremium: false,
+    failureRateBase: 0.010, tags: ['server', '1u', 'dual-core'],
+  },
+  {
+    id: 'HP_DL360_G5',
+    name: 'HP ProLiant DL360 G5',
+    category: HardwareCategory.Server,
+    era: 2, unlockYear: 2007, eolYear: 2013,
+    specs: { rackUnits: 1, powerWatts: 420, serviceCapacity: 55, capacityUnit: CapacityUnit.VPS },
+    pricing: { basePriceNTD: 204_000, maintenanceRatePerYear: 0.08, warrantyYears: 3 },
+    brand: HardwareBrand.HP_HPE, isODM: false, isPremium: false,
+    failureRateBase: 0.010, tags: ['server', '1u', 'high-density'],
+  },
+  {
+    id: 'HP_DL380_G5',
+    name: 'HP ProLiant DL380 G5',
+    category: HardwareCategory.Server,
+    era: 2, unlockYear: 2007, eolYear: 2014,
+    specs: { rackUnits: 2, powerWatts: 480, serviceCapacity: 68, capacityUnit: CapacityUnit.VPS },
+    pricing: { basePriceNTD: 246_000, maintenanceRatePerYear: 0.08, warrantyYears: 3 },
+    brand: HardwareBrand.HP_HPE, isODM: false, isPremium: false,
+    failureRateBase: 0.010, tags: ['server', '2u', 'mainstream'],
+  },
+  {
+    id: 'IBM_X3550',
+    name: 'IBM System x3550',
+    category: HardwareCategory.Server,
+    era: 2, unlockYear: 2006, eolYear: 2013,
+    specs: { rackUnits: 1, powerWatts: 360, serviceCapacity: 52, capacityUnit: CapacityUnit.VPS },
+    pricing: { basePriceNTD: 252_000, maintenanceRatePerYear: 0.10, warrantyYears: 3 },
+    brand: HardwareBrand.IBM, isODM: false, isPremium: true,
+    failureRateBase: 0.008, tags: ['server', '1u', 'enterprise'],
+  },
+  {
+    id: 'SMC_6025B',
+    name: 'Supermicro SuperServer 6025B',
+    category: HardwareCategory.Server,
+    era: 2, unlockYear: 2006, eolYear: 2012,
+    specs: { rackUnits: 2, powerWatts: 400, serviceCapacity: 48, capacityUnit: CapacityUnit.VPS },
+    pricing: { basePriceNTD: 114_000, maintenanceRatePerYear: 0.12, warrantyYears: 1 },
+    brand: HardwareBrand.Supermicro, isODM: true, isPremium: false,
+    failureRateBase: 0.015, tags: ['server', '2u', 'odm', 'budget'],
+  },
+];
+
+const ERA2_STORAGE: HardwareModel[] = [
+  {
+    id: 'EMC_CX3_20',
+    name: 'EMC Clariion CX3-20',
+    category: HardwareCategory.Storage,
+    era: 2, unlockYear: 2005, eolYear: 2015,
+    specs: { rackUnits: 2, powerWatts: 700, serviceCapacity: 4.0, capacityUnit: CapacityUnit.StorageMult },
+    pricing: { basePriceNTD: 1_560_000, maintenanceRatePerYear: 0.12, warrantyYears: 3 },
+    brand: HardwareBrand.Other, isODM: false, isPremium: true,
+    failureRateBase: 0.008, tags: ['storage', 'san', 'fc', 'iscsi'],
+  },
+  {
+    id: 'NETAPP_FAS2020',
+    name: 'NetApp FAS2020',
+    category: HardwareCategory.Storage,
+    era: 2, unlockYear: 2007, eolYear: 2016,
+    specs: { rackUnits: 2, powerWatts: 500, serviceCapacity: 3.0, capacityUnit: CapacityUnit.StorageMult },
+    pricing: { basePriceNTD: 900_000, maintenanceRatePerYear: 0.14, warrantyYears: 3 },
+    brand: HardwareBrand.NetApp, isODM: false, isPremium: true,
+    failureRateBase: 0.007, tags: ['storage', 'nas', 'nfs', 'unified'],
+  },
+  {
+    id: 'HP_P2000_G3',
+    name: 'HP StorageWorks P2000 G3',
+    category: HardwareCategory.Storage,
+    era: 2, unlockYear: 2008, eolYear: 2016,
+    specs: { rackUnits: 2, powerWatts: 350, serviceCapacity: 2.0, capacityUnit: CapacityUnit.StorageMult },
+    pricing: { basePriceNTD: 360_000, maintenanceRatePerYear: 0.12, warrantyYears: 3 },
+    brand: HardwareBrand.HP_HPE, isODM: false, isPremium: false,
+    failureRateBase: 0.009, tags: ['storage', 'san', 'iscsi', 'entry'],
+  },
+];
+
+const ERA2_NETWORKING: HardwareModel[] = [
+  {
+    id: 'CISCO_C3750G_24',
+    name: 'Cisco Catalyst 3750G-24TS',
+    category: HardwareCategory.Networking,
+    era: 2, unlockYear: 2005, eolYear: 2016,
+    specs: { rackUnits: 1, powerWatts: 55, serviceCapacity: 2.5, capacityUnit: CapacityUnit.NetworkPerf },
+    pricing: { basePriceNTD: 195_000, maintenanceRatePerYear: 0.10, warrantyYears: 1 },
+    brand: HardwareBrand.Cisco, isODM: false, isPremium: false,
+    failureRateBase: 0.004, tags: ['networking', 'switch', 'l3', 'gbe', 'stack'],
+  },
+  {
+    id: 'CISCO_ASA5520',
+    name: 'Cisco ASA 5520',
+    category: HardwareCategory.Networking,
+    era: 2, unlockYear: 2005, eolYear: 2013,
+    specs: { rackUnits: 1, powerWatts: 35, serviceCapacity: 2.5, capacityUnit: CapacityUnit.SecurityLevel },
+    pricing: { basePriceNTD: 165_000, maintenanceRatePerYear: 0.12, warrantyYears: 1 },
+    brand: HardwareBrand.Cisco, isODM: false, isPremium: false,
+    failureRateBase: 0.005, tags: ['networking', 'firewall', 'vpn', 'security'],
+  },
+  {
+    id: 'JUNIPER_EX4200',
+    name: 'Juniper EX4200-48T',
+    category: HardwareCategory.Networking,
+    era: 2, unlockYear: 2008, eolYear: 2017,
+    specs: { rackUnits: 1, powerWatts: 65, serviceCapacity: 2.8, capacityUnit: CapacityUnit.NetworkPerf },
+    pricing: { basePriceNTD: 255_000, maintenanceRatePerYear: 0.10, warrantyYears: 1 },
+    brand: HardwareBrand.Juniper, isODM: false, isPremium: false,
+    failureRateBase: 0.004, tags: ['networking', 'switch', 'l3', 'virtual-chassis'],
+  },
+  {
+    id: 'CISCO_NEXUS5010',
+    name: 'Cisco Nexus 5010',
+    category: HardwareCategory.Networking,
+    era: 2, unlockYear: 2009, eolYear: 2019,
+    specs: { rackUnits: 7, powerWatts: 2000, serviceCapacity: 8.0, capacityUnit: CapacityUnit.NetworkPerf },
+    pricing: { basePriceNTD: 1_500_000, maintenanceRatePerYear: 0.15, warrantyYears: 3 },
+    brand: HardwareBrand.Cisco, isODM: false, isPremium: true,
+    failureRateBase: 0.003, tags: ['networking', 'switch', 'core', '10gbe', 'fcoe'],
+  },
+];
+
+const ERA2_UPS: HardwareModel[] = [
+  {
+    id: 'APC_SURT8000',
+    name: 'APC Smart-UPS RT 8000VA',
+    category: HardwareCategory.UPS,
+    era: 2, unlockYear: 2005, eolYear: 2018,
+    specs: { rackUnits: 5, powerWatts: 0, serviceCapacity: 3.0, capacityUnit: CapacityUnit.PowerProtect },
+    pricing: { basePriceNTD: 180_000, maintenanceRatePerYear: 0.08, warrantyYears: 2 },
+    brand: HardwareBrand.APC, isODM: false, isPremium: false,
+    failureRateBase: 0.003, tags: ['ups', 'power', '8kva', 'online'],
+  },
+  {
+    id: 'EATON_9130_10K',
+    name: 'Eaton 9130 10kVA',
+    category: HardwareCategory.UPS,
+    era: 2, unlockYear: 2006, eolYear: 2018,
+    specs: { rackUnits: 4, powerWatts: 0, serviceCapacity: 3.5, capacityUnit: CapacityUnit.PowerProtect },
+    pricing: { basePriceNTD: 270_000, maintenanceRatePerYear: 0.08, warrantyYears: 2 },
+    brand: HardwareBrand.Eaton, isODM: false, isPremium: false,
+    failureRateBase: 0.003, tags: ['ups', 'power', '10kva', 'online'],
+  },
+];
+
+// ─── Full catalog (all eras combined) ─────────────────────────────────────────
 
 export const HARDWARE_CATALOG: HardwareModel[] = [
   ...ERA1_SERVERS,
   ...ERA1_STORAGE,
   ...ERA1_NETWORKING,
   ...ERA1_UPS,
+  ...ERA2_SERVERS,
+  ...ERA2_STORAGE,
+  ...ERA2_NETWORKING,
+  ...ERA2_UPS,
 ];
 
 export const HARDWARE_CATALOG_BY_ID = new Map<string, HardwareModel>(

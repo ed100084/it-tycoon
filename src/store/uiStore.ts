@@ -24,6 +24,8 @@ import type {
   SoftwareProduct,
   CoolingLevel,
 } from '../game/core/types';
+import type { TutorialStep } from '../game/modules/TutorialEngine';
+import type { TutorialEngine } from '../game/modules/TutorialEngine';
 import type { GameEngine } from '../game/core/GameEngine';
 import type { TimeEngine } from '../game/modules/TimeEngine';
 import type { FinanceEngine } from '../game/modules/FinanceEngine';
@@ -94,6 +96,12 @@ export interface UIState {
   // Reputation
   satisfactionScore: number;
 
+  // Finance history (last 12 months)
+  plHistory: PLStatement[];
+
+  // Tutorial
+  tutorialStep: TutorialStep | null;
+
   // Engine ref (not reactive, just for actions)
   _engine: GameEngine | null;
 
@@ -118,6 +126,8 @@ export interface UIState {
   startTechResearch: (nodeId: string) => void;
   cancelTechResearch: (nodeId: string) => void;
   makeTimelineDecision: (decisionId: string, optionIndex: number) => void;
+  nextTutorialStep: () => void;
+  skipTutorial: () => void;
   _connectEngine: (engine: GameEngine) => void;
 }
 
@@ -157,6 +167,9 @@ export const useUIStore = create<UIState>((set, get) => ({
   techNodes: [],
 
   satisfactionScore: 75,
+
+  plHistory: [],
+  tutorialStep: null,
 
   _engine: null,
 
@@ -310,6 +323,22 @@ export const useUIStore = create<UIState>((set, get) => ({
     set({ pendingDecisions: et.getPendingDecisions(), activeModifiers: et.getActiveModifiers() });
   },
 
+  nextTutorialStep() {
+    const engine = get()._engine;
+    if (!engine) return;
+    const tutorial = engine.getModule<TutorialEngine>('TutorialEngine');
+    tutorial.nextStep();
+    set({ tutorialStep: tutorial.getCurrentStep() });
+  },
+
+  skipTutorial() {
+    const engine = get()._engine;
+    if (!engine) return;
+    const tutorial = engine.getModule<TutorialEngine>('TutorialEngine');
+    tutorial.skip();
+    set({ tutorialStep: null });
+  },
+
   _connectEngine(engine) {
     const time = engine.getModule<TimeEngine>('TimeEngine');
     const finance = engine.getModule<FinanceEngine>('FinanceEngine');
@@ -322,6 +351,7 @@ export const useUIStore = create<UIState>((set, get) => ({
     const et = engine.getModule<EventTimeline>('EventTimeline');
     const tt = engine.getModule<TechTree>('TechTree');
     const rep = engine.getModule<ReputationEngine>('ReputationEngine');
+    const tutorial = engine.getModule<TutorialEngine>('TutorialEngine');
 
     set({
       _engine: engine,
@@ -355,7 +385,14 @@ export const useUIStore = create<UIState>((set, get) => ({
       economicCycle: et.getEconomicCycle(),
       techNodes: tt.getNodes(),
       satisfactionScore: rep.getSatisfactionScore(),
+      plHistory: finance.getPLHistory(12),
     });
+
+    // Start tutorial if not completed (after a brief delay so UI is mounted)
+    setTimeout(() => {
+      tutorial.start();
+      set({ tutorialStep: tutorial.getCurrentStep() });
+    }, 800);
 
     const bus = engine.bus;
 
@@ -366,6 +403,7 @@ export const useUIStore = create<UIState>((set, get) => ({
         lastPL: finance.getLastMonthPL(),
         activeLoans: finance.getActiveLoans(),
         creditRating: finance.getCreditRating(),
+        plHistory: finance.getPLHistory(12),
         facilityRegions: fm.getRegions(),
         availableHardwareModels: hw.getAvailableModels(time.getCurrentDate()),
         hardwareAssets: hw.getAssets(),
@@ -388,6 +426,14 @@ export const useUIStore = create<UIState>((set, get) => ({
         techNodes: tt.getNodes(),
         satisfactionScore: rep.getSatisfactionScore(),
       });
+    });
+
+    bus.subscribe('tutorial.step_triggered', () => {
+      set({ tutorialStep: tutorial.getCurrentStep() });
+    });
+
+    bus.subscribe('tutorial.completed', () => {
+      set({ tutorialStep: null });
     });
 
     bus.subscribe('time.paused', (e) => {

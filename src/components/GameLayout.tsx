@@ -2,12 +2,20 @@ import React, { useEffect, useState } from 'react';
 import { TimeBar } from './hud/TimeBar';
 import { FinancePanel } from './panels/FinancePanel';
 import { EventLogPanel, pushEventLog } from './panels/EventLogPanel';
+import { FacilityManagerPanel } from './panels/FacilityManagerPanel';
+import { HardwareCatalogPanel } from './panels/HardwareCatalogPanel';
+import { SoftwareCatalogPanel } from './panels/SoftwareCatalogPanel';
+import { ContractManagerPanel } from './panels/ContractManagerPanel';
 import { StaffPanel } from './panels/StaffPanel';
 import { SecurityPanel } from './panels/SecurityPanel';
 import { EventTimelinePanel } from './panels/EventTimelinePanel';
 import { TechTreePanel } from './panels/TechTreePanel';
 import { ReputationPanel } from './panels/ReputationPanel';
+import { TutorialOverlay } from './ui/TutorialOverlay';
+import { ToastContainer } from './ui/ToastContainer';
+import { EventModal } from './ui/EventModal';
 import { useUIStore } from '../store/uiStore';
+import { useToastStore } from '../store/toastStore';
 
 const formatTime = () => {
   const now = new Date();
@@ -20,9 +28,15 @@ function fmtCash(n: number): string {
   return `NT$${n.toLocaleString()}`;
 }
 
-type CenterTab = 'staff' | 'security' | 'timeline' | 'techtree' | 'reputation';
+type CenterTab =
+  | 'facility' | 'hardware' | 'software' | 'contract'
+  | 'staff' | 'security' | 'timeline' | 'techtree' | 'reputation';
 
 const TAB_LABELS: Record<CenterTab, string> = {
+  facility:   '🏢 機房',
+  hardware:   '🖥️ 硬體',
+  software:   '💿 軟體',
+  contract:   '📋 合約',
   staff:      '👥 人員',
   security:   '🔒 資安',
   timeline:   '📅 時間軸',
@@ -30,10 +44,20 @@ const TAB_LABELS: Record<CenterTab, string> = {
   reputation: '⭐ 聲譽',
 };
 
+const TAB_ORDER: CenterTab[] = [
+  'facility', 'hardware', 'software', 'contract',
+  'staff', 'security', 'timeline', 'techtree', 'reputation',
+];
+
 export const GameLayout: React.FC = () => {
   const {
     saveGame, _engine,
     cash, creditRating,
+    currentDate,
+    facilityRegions, upgradeCooling, expandCapacity, unlockRegion,
+    availableHardwareModels, hardwareAssets, purchaseHardware, disposeHardware,
+    availableSoftwareProducts, softwareLicenses, complianceScore, purchaseSoftware, cancelSoftwareLicense,
+    pendingRFPs, activeContracts, monthlyRevenueEstimate, submitContractBid, declineRFP, declineContractRenewal,
     staffList, jobOpenings, shiftMode, monthlyPayroll,
     activeIncidents, securityPostureScore, securityComplianceScore,
     triggeredEvents, activeModifiers, pendingDecisions, economicCycle,
@@ -43,10 +67,13 @@ export const GameLayout: React.FC = () => {
     postJobOpening, hireStaff, layoffStaff,
     startTechResearch, cancelTechResearch,
     makeTimelineDecision,
+    setSpeed,
   } = useUIStore();
 
+  const { addToast, showModal } = useToastStore();
+
   const clockRef = React.useRef<HTMLSpanElement>(null);
-  const [centerTab, setCenterTab] = useState<CenterTab>('staff');
+  const [centerTab, setCenterTab] = useState<CenterTab>('facility');
 
   useEffect(() => {
     const id = setInterval(() => {
@@ -55,6 +82,7 @@ export const GameLayout: React.FC = () => {
     return () => clearInterval(id);
   }, []);
 
+  // EventBus subscriptions — event log + toasts + modals
   useEffect(() => {
     if (!_engine) return;
     const bus = _engine.bus;
@@ -64,55 +92,101 @@ export const GameLayout: React.FC = () => {
         const color = pl.netProfit >= 0 ? 'var(--accent-green)' : 'var(--accent-red)';
         const sign = pl.netProfit >= 0 ? '+' : '';
         pushEventLog(e, `月結算：稅後淨利 ${sign}NT$${pl.netProfit.toLocaleString()}`, color);
+        if (pl.netProfit >= 0) {
+          addToast('success', `月結算淨利 ${sign}NT$${(pl.netProfit / 1000).toFixed(0)}K`);
+        } else {
+          addToast('warning', `月結算虧損 NT$${(pl.netProfit / 1000).toFixed(0)}K`);
+        }
       }),
       bus.subscribe('finance.cash_warning', (e) => {
         pushEventLog(e, '⚠ 現金餘額低於警戒線（月支出 ×2）', 'var(--accent-yellow)');
+        addToast('warning', '⚠ 現金餘額低於警戒線！');
       }),
       bus.subscribe('finance.loan_approved', (e) => {
         const loan = e.payload as { principal: number };
         pushEventLog(e, `✓ 貸款核准：NT$${loan.principal.toLocaleString()}`, 'var(--accent-cyan)');
+        addToast('info', `貸款核准 NT$${(loan.principal / 1_000_000).toFixed(1)}M`);
       }),
       bus.subscribe('finance.credit_rating_changed', (e) => {
         const p = e.payload as { from: string; to: string };
         const color = p.from < p.to ? 'var(--accent-green)' : 'var(--accent-red)';
         pushEventLog(e, `信用評等：${p.from} → ${p.to}`, color);
+        addToast(p.to > p.from ? 'success' : 'warning', `信用評等 ${p.from} → ${p.to}`);
       }),
       bus.subscribe('finance.cash_depleted', (e) => {
         pushEventLog(e, '⛔ 現金歸零！緊急狀況', 'var(--accent-red)');
+        addToast('error', '⛔ 現金歸零！緊急狀況', 8000);
       }),
       bus.subscribe('time.year_end', (e) => {
         const p = e.payload as { year: number };
         pushEventLog(e, `── ${p.year} 年度結算完成 ──`, 'var(--accent-purple)');
+        addToast('info', `${p.year} 年度結算完成`);
       }),
       bus.subscribe('security.incident_triggered', (e) => {
-        const inc = e.payload as { severity: string; type: string };
+        const inc = e.payload as { severity: string; type: string; id: string };
         const color = inc.severity === 'P1' ? 'var(--accent-red)' : inc.severity === 'P2' ? '#f97316' : 'var(--accent-yellow)';
         pushEventLog(e, `⚠ [${inc.severity}] 資安事件：${inc.type}`, color);
         setCenterTab('security');
+        if (inc.severity === 'P1' || inc.severity === 'P2') {
+          // Pause and show modal for critical incidents
+          setSpeed(0);
+          showModal({
+            title: `[${inc.severity}] 資安事件：${inc.type}`,
+            body: `偵測到 ${inc.severity} 等級資安事件！請立即前往資安面板處理。`,
+            severity: inc.severity === 'P1' ? 'critical' : 'warning',
+          });
+        } else {
+          addToast('warning', `[${inc.severity}] ${inc.type}`);
+        }
       }),
       bus.subscribe('timeline.historical_event', (e) => {
-        const ev = e.payload as { name: string };
+        const ev = e.payload as { name: string; description?: string };
         pushEventLog(e, `📅 歷史事件：${ev.name}`, 'var(--accent-purple)');
         setCenterTab('timeline');
+        setSpeed(0);
+        showModal({
+          title: `📅 歷史事件：${ev.name}`,
+          body: ev.description ?? '全球重大歷史事件正在影響 IT 產業。請查看時間軸面板了解詳情。',
+          severity: 'info',
+        });
       }),
       bus.subscribe('timeline.decision_required', () => {
         setCenterTab('timeline');
+        addToast('warning', '⚠ 需要決策！請前往時間軸面板。');
       }),
       bus.subscribe('staff.resigned', (e) => {
         const p = e.payload as { name: string; role: string };
         pushEventLog(e, `👋 員工離職：${p.name} (${p.role})`, 'var(--accent-yellow)');
+        addToast('warning', `員工離職：${p.name}`);
+      }),
+      bus.subscribe('staff.hired', (e) => {
+        const p = e.payload as { name: string; role: string };
+        pushEventLog(e, `✓ 員工雇用：${p.name} (${p.role})`, 'var(--accent-green)');
+        addToast('success', `雇用成功：${p.name}`);
+      }),
+      bus.subscribe('contract.signed', (e) => {
+        const p = e.payload as { clientName?: string };
+        pushEventLog(e, `✓ 合約簽署${p.clientName ? `：${p.clientName}` : ''}`, 'var(--accent-green)');
+        addToast('success', `合約簽署成功${p.clientName ? `：${p.clientName}` : ''}`);
+      }),
+      bus.subscribe('hardware.installed', (e) => {
+        const p = e.payload as { modelId?: string };
+        pushEventLog(e, `🖥️ 硬體安裝完成${p.modelId ? `：${p.modelId}` : ''}`, 'var(--accent-cyan)');
+        addToast('success', `硬體安裝完成`);
       }),
       bus.subscribe('techtree.research_completed', (e) => {
         const p = e.payload as { nodeName: string };
         pushEventLog(e, `🔬 科技解鎖：${p.nodeName}`, 'var(--accent-cyan)');
+        addToast('success', `科技解鎖：${p.nodeName}`);
       }),
       bus.subscribe('reputation.low_satisfaction_warning', (e) => {
         const p = e.payload as { score: number };
         pushEventLog(e, `⚠ 客戶滿意度警告：${p.score.toFixed(0)}`, 'var(--accent-red)');
+        addToast('error', `客戶滿意度過低：${p.score.toFixed(0)}`);
       }),
     ];
     return () => unsubs.forEach(u => u());
-  }, [_engine]);
+  }, [_engine, addToast, showModal, setSpeed]);
 
   const handleSave = () => saveGame();
 
@@ -165,7 +239,7 @@ export const GameLayout: React.FC = () => {
 
         <section className="center-panel">
           <div className="tab-bar">
-            {(Object.keys(TAB_LABELS) as CenterTab[]).map(tab => (
+            {TAB_ORDER.map(tab => (
               <button
                 key={tab}
                 className={`tab-btn${centerTab === tab ? ' active' : ''}`}
@@ -178,6 +252,9 @@ export const GameLayout: React.FC = () => {
                 {tab === 'timeline' && pendingDecisions.length > 0 && (
                   <span className="tab-badge warn">!</span>
                 )}
+                {tab === 'contract' && pendingRFPs.length > 0 && (
+                  <span className="tab-badge info">{pendingRFPs.length}</span>
+                )}
               </button>
             ))}
             <div className="tab-satisfaction">
@@ -189,6 +266,43 @@ export const GameLayout: React.FC = () => {
           </div>
 
           <div className="tab-content">
+            {centerTab === 'facility' && (
+              <FacilityManagerPanel
+                regions={facilityRegions}
+                onUpgradeCooling={upgradeCooling}
+                onExpandCapacity={expandCapacity}
+                onUnlockRegion={unlockRegion}
+              />
+            )}
+            {centerTab === 'hardware' && (
+              <HardwareCatalogPanel
+                availableModels={availableHardwareModels}
+                assets={hardwareAssets}
+                currentYear={currentDate.year}
+                onPurchase={purchaseHardware}
+                onDispose={disposeHardware}
+              />
+            )}
+            {centerTab === 'software' && (
+              <SoftwareCatalogPanel
+                availableProducts={availableSoftwareProducts}
+                licenses={softwareLicenses}
+                complianceScore={complianceScore}
+                currentYear={currentDate.year}
+                onPurchase={purchaseSoftware}
+                onCancel={cancelSoftwareLicense}
+              />
+            )}
+            {centerTab === 'contract' && (
+              <ContractManagerPanel
+                pendingRFPs={pendingRFPs}
+                activeContracts={activeContracts}
+                monthlyRevenue={monthlyRevenueEstimate}
+                onSubmitBid={submitContractBid}
+                onDeclineRFP={declineRFP}
+                onDeclineRenewal={declineContractRenewal}
+              />
+            )}
             {centerTab === 'staff' && (
               <StaffPanel
                 staffList={staffList}
@@ -235,11 +349,16 @@ export const GameLayout: React.FC = () => {
       </main>
 
       <footer className="game-footer">
-        <span className="footer-text">IT-TYCOON v3.0 · 407 tests pass</span>
+        <span className="footer-text">IT-TYCOON v3.0 · Phase 1-3 完整版</span>
         <span className="footer-warn">
-          StaffManager · SecurityEngine · EventTimeline · TechTree · ReputationEngine
+          機房 · 硬體 · 軟體 · 合約 · 人員 · 資安 · 時間軸 · 科技樹 · 聲譽
         </span>
       </footer>
+
+      {/* Overlays */}
+      <TutorialOverlay />
+      <ToastContainer />
+      <EventModal />
     </div>
   );
 };

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useUIStore } from '../../store/uiStore';
 import type { PLStatement } from '../../game/core/types';
 
@@ -43,8 +43,62 @@ function PLSummary({ pl }: { pl: PLStatement }) {
   );
 }
 
+const CHART_HEIGHT = 56;
+
+function PLTrendChart({ history }: { history: PLStatement[] }) {
+  const [hovered, setHovered] = useState<number | null>(null);
+  if (history.length === 0) return null;
+
+  const maxVal = Math.max(
+    1,
+    ...history.map((p) => Math.max(p.income.total, p.expenses.total)),
+  );
+
+  return (
+    <div className="pl-chart">
+      <div className="pl-section-title" style={{ padding: '8px 14px 4px' }}>
+        趨勢（近 {history.length} 個月）
+      </div>
+      <div className="pl-chart-bars">
+        {history.map((pl, i) => {
+          const revH = Math.max(2, (pl.income.total / maxVal) * CHART_HEIGHT);
+          const expH = Math.max(2, (pl.expenses.total / maxVal) * CHART_HEIGHT);
+          const isProfit = pl.netProfit >= 0;
+          const isHovered = hovered === i;
+          return (
+            <div
+              key={i}
+              className="pl-chart-col"
+              onMouseEnter={() => setHovered(i)}
+              onMouseLeave={() => setHovered(null)}
+            >
+              {isHovered && (
+                <div className="pl-chart-tooltip">
+                  <div>{pl.date.year}/{pl.date.month}</div>
+                  <div style={{ color: 'var(--accent-green)' }}>收入 {fmtNTD(pl.income.total)}</div>
+                  <div style={{ color: 'var(--accent-red)' }}>支出 {fmtNTD(pl.expenses.total)}</div>
+                  <div style={{ color: isProfit ? 'var(--accent-green)' : 'var(--accent-red)' }}>
+                    淨利 {fmtNTD(pl.netProfit)}
+                  </div>
+                </div>
+              )}
+              <div className="pl-chart-col-bars" style={{ height: CHART_HEIGHT }}>
+                <div className="pl-bar pl-bar-rev" style={{ height: revH }} />
+                <div className="pl-bar pl-bar-exp" style={{ height: expH }} />
+              </div>
+              <div className={`pl-chart-month-label ${isProfit ? 'profit' : 'loss'}`}>
+                {pl.date.month}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 export const FinancePanel: React.FC = () => {
-  const { cash, creditRating, lastPL, activeLoans } = useUIStore();
+  const { cash, creditRating, lastPL, activeLoans, plHistory } = useUIStore();
 
   const totalDebt = activeLoans.reduce((s, l) => s + l.remainingBalance, 0);
 
@@ -86,6 +140,8 @@ export const FinancePanel: React.FC = () => {
       ) : (
         <div className="pl-empty">尚無月結算資料 — 等待首次月末結算</div>
       )}
+
+      {plHistory.length > 0 && <PLTrendChart history={plHistory} />}
 
       {activeLoans.length > 0 && (
         <div className="loan-list">

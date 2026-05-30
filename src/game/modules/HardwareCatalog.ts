@@ -217,6 +217,7 @@ export class HardwareCatalog implements IGameModule {
         };
         const annualRate = rates[asset.maintenanceType] ?? 0;
         monthlyFee = Math.round((asset.purchasePrice * annualRate) / 12);
+        if (asset.isEOL) monthlyFee *= 2; // EOL hardware demands double maintenance effort
       }
       if (monthlyFee > 0) {
         this.bus.publish({

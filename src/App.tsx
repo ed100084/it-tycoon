@@ -13,6 +13,7 @@ import { SecurityEngine } from './game/modules/SecurityEngine';
 import { EventTimeline } from './game/modules/EventTimeline';
 import { TechTree } from './game/modules/TechTree';
 import { ReputationEngine } from './game/modules/ReputationEngine';
+import { TutorialEngine } from './game/modules/TutorialEngine';
 import { DEFAULT_CONFIG } from './game/config/default.config';
 import { useUIStore } from './store/uiStore';
 
@@ -31,7 +32,8 @@ engine
   .register(new SecurityEngine())
   .register(new EventTimeline())
   .register(new TechTree())
-  .register(new ReputationEngine());
+  .register(new ReputationEngine())
+  .register(new TutorialEngine());
 
 const App: React.FC = () => {
   const [phase, setPhase] = useState<Phase>('boot');

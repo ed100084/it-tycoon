@@ -6,6 +6,7 @@ interface Props {
   availableProducts: SoftwareProduct[];
   licenses: SoftwareLicense[];
   complianceScore: number;
+  currentYear?: number;
   onPurchase: (productId: string) => void;
   onCancel: (licenseId: string) => void;
 }
@@ -42,6 +43,7 @@ export const SoftwareCatalogPanel: React.FC<Props> = ({
   availableProducts,
   licenses,
   complianceScore,
+  currentYear,
   onPurchase,
   onCancel,
 }) => {
@@ -88,19 +90,25 @@ export const SoftwareCatalogPanel: React.FC<Props> = ({
         <div style={{ maxHeight: 280, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 4 }}>
           {availableProducts.map(product => {
             const owned = ownedProductIds.has(product.id);
+            const isEos = currentYear !== undefined && product.eosYear !== 9999 && currentYear > product.eosYear;
             return (
               <div
                 key={product.id}
                 style={{
                   padding: '6px 8px', borderRadius: 4,
-                  border: `1px solid ${owned ? '#446644' : '#444'}`,
-                  background: owned ? '#111a11' : '#11151a',
+                  border: `1px solid ${owned ? '#446644' : isEos ? '#664422' : '#444'}`,
+                  background: owned ? '#111a11' : isEos ? '#1a1208' : '#11151a',
                   fontSize: 12,
                 }}
               >
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ color: '#ddd' }}>{product.name}</span>
+                  <span style={{ color: isEos ? '#cc8855' : '#ddd' }}>{product.name}</span>
                   <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                    {isEos && (
+                      <span style={{ fontSize: 10, color: '#ff8844', background: '#3a1a0a', padding: '1px 5px', borderRadius: 3 }}>
+                        EOS 過期
+                      </span>
+                    )}
                     <span style={{ color: product.isFreeOpenSource ? '#88ff88' : '#ffcc44', fontSize: 11 }}>
                       {product.isFreeOpenSource ? '免費' : `NT${product.annualCostNTD.toLocaleString()}/年`}
                     </span>
