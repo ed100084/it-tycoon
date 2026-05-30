@@ -228,6 +228,11 @@ export interface GameConfig {
   hardware?: HardwareModuleConfig;
   software?: SoftwareModuleConfig;
   contract?: ContractModuleConfig;
+  staff?: StaffConfig;
+  security?: SecurityConfig;
+  eventTimeline?: EventTimelineConfig;
+  techTree?: TechTreeConfig;
+  reputation?: ReputationConfig;
 }
 
 // ─── Save / load ──────────────────────────────────────────────────────────────
@@ -702,6 +707,415 @@ export interface ContractModuleConfig {
     lowSatisfactionProlonged: number;
     competitorOffer: number;
   };
+}
+
+// ─── Staff types ──────────────────────────────────────────────────────────────
+
+export enum StaffStatus {
+  InRecruitment = 'IN_RECRUITMENT',
+  InTraining    = 'IN_TRAINING',
+  Active        = 'ACTIVE',
+  OnLeave       = 'ON_LEAVE',
+  Assigned      = 'ASSIGNED',
+  ResignPending = 'RESIGN_PENDING',
+}
+
+export enum ShiftMode {
+  DayOnly    = 'DAY_ONLY',
+  TwoShift   = 'TWO_SHIFT',
+  ThreeShift = 'THREE_SHIFT',
+  AIOps      = 'AIOPS',
+}
+
+export interface StaffMember {
+  id: EntityId;
+  name: string;
+  role: StaffRole;
+  level: 1 | 2 | 3 | 4 | 5;
+  monthlySalaryNTD: Money;
+  hireDate: GameDate;
+  monthsInService: number;
+  qualityScore: number;
+  status: StaffStatus;
+  promotionEligibleDate: GameDate;
+  promotionCostNTD: Money;
+  managementCapacityU: number;
+  handlingPower: number;
+  isSecuritySpecialist: boolean;
+  assignedIncidentIds: EntityId[];
+  assignedRegion: FacilityRegion | null;
+  trainingCompletionDate: GameDate | null;
+  satisfactionScore: number;
+}
+
+export interface JobOpening {
+  id: EntityId;
+  role: StaffRole;
+  postedDate: GameDate;
+  recruitmentDurationMonths: number;
+  availableDate: GameDate;
+  status: 'recruiting' | 'interview_ready' | 'filled' | 'cancelled';
+  candidateName: string;
+}
+
+export interface InterviewResult {
+  openingId: EntityId;
+  score: number;
+  qualityBonus: number;
+}
+
+export interface LayoffResult {
+  staffId: EntityId;
+  severancePay: Money;
+  date: GameDate;
+}
+
+export interface IncidentHandlingCapacity {
+  totalHandlingPower: number;
+  availableForIncidents: number;
+  securityHandlingPower: number;
+  estimatedResolutionMultiplier: number;
+}
+
+// ─── Security types ───────────────────────────────────────────────────────────
+
+export enum IncidentType {
+  HardwareFailure   = 'HARDWARE_FAILURE',
+  NetworkOutage     = 'NETWORK_OUTAGE',
+  CapacityAlarm     = 'CAPACITY_ALARM',
+  PowerAnomaly      = 'POWER_ANOMALY',
+  CoolingFailure    = 'COOLING_FAILURE',
+  Ransomware        = 'RANSOMWARE',
+  DataBreach        = 'DATA_BREACH',
+  SocialEngineering = 'SOCIAL_ENGINEERING',
+  APTAttack         = 'APT_ATTACK',
+  DDoS              = 'DDOS',
+  ComplianceGap     = 'COMPLIANCE_GAP',
+  InsiderThreat     = 'INSIDER_THREAT',
+  SupplyChainAttack = 'SUPPLY_CHAIN_ATTACK',
+}
+
+export enum IncidentStatus {
+  Active        = 'ACTIVE',
+  Investigating = 'INVESTIGATING',
+  Mitigating    = 'MITIGATING',
+  Resolved      = 'RESOLVED',
+  TimedOut      = 'TIMED_OUT',
+}
+
+export enum ResponseAction {
+  PayRansom          = 'PAY_RANSOM',
+  RestoreFromBackup  = 'RESTORE_BACKUP',
+  WaitOut            = 'WAIT_OUT',
+  StartInvestigation = 'START_INVESTIGATION',
+  ReportToAuthority  = 'REPORT_AUTHORITY',
+  WarrantyRepair     = 'WARRANTY_REPAIR',
+  ThirdPartyRepair   = 'THIRD_PARTY_REPAIR',
+  ReplaceSame        = 'REPLACE_SAME',
+  ReplaceUpgrade     = 'REPLACE_UPGRADE',
+  RunRequisition     = 'RUN_REQUISITION',
+  AssignEngineer     = 'ASSIGN_ENGINEER',
+  EscalateToManager  = 'ESCALATE',
+}
+
+export interface IncidentResponseRecord {
+  action: ResponseAction;
+  timestamp: GameDate;
+  staffId?: EntityId;
+  cost?: Money;
+  result: string;
+}
+
+export interface Incident {
+  id: EntityId;
+  type: IncidentType;
+  severity: IncidentSeverity;
+  status: IncidentStatus;
+  triggeredAt: GameDate;
+  triggeredAtHour: number;
+  resolvedAt: GameDate | null;
+  deadlineHours: number;
+  elapsedHours: number;
+  isBreached: boolean;
+  region: FacilityRegion | null;
+  affectedContractIds: EntityId[];
+  assignedStaffIds: EntityId[];
+  responses: IncidentResponseRecord[];
+  resolutionMethod: string | null;
+  financialImpact: Money;
+  downtimeHours: number;
+}
+
+// ─── EventTimeline types ──────────────────────────────────────────────────────
+
+export enum EventEffectType {
+  BaseInterestRate    = 'BASE_INTEREST_RATE',
+  EconomicCycle       = 'ECONOMIC_CYCLE',
+  ElectricityRate     = 'ELECTRICITY_RATE',
+  ElectricityMod      = 'ELECTRICITY_MOD',
+  HardwareCostMod     = 'HARDWARE_COST_MOD',
+  DeliveryDelayMonths = 'DELIVERY_DELAY',
+  SoftwarePriceChange = 'SOFTWARE_PRICE_CHANGE',
+  ForcedEOS           = 'FORCED_EOS',
+  RFPFrequencyMod     = 'RFP_FREQUENCY_MOD',
+  ContractValueMod    = 'CONTRACT_VALUE_MOD',
+  ClientBudgetMod     = 'CLIENT_BUDGET_MOD',
+  ThreatLevelMod      = 'THREAT_LEVEL_MOD',
+  SpecificThreatMod   = 'SPECIFIC_THREAT_MOD',
+  StaffEfficiencyMod  = 'STAFF_EFFICIENCY_MOD',
+  RecruitmentCostMod  = 'RECRUITMENT_COST_MOD',
+  ResignationRateMod  = 'RESIGNATION_RATE_MOD',
+  ExchangeRateMod     = 'EXCHANGE_RATE_MOD',
+  InflationRateMod    = 'INFLATION_RATE_MOD',
+}
+
+export interface EventEffect {
+  targetModule: string;
+  effectType: EventEffectType;
+  value: number;
+  isMultiplier: boolean;
+  description: string;
+  incidentType?: IncidentType;
+}
+
+export interface EventDecisionOption {
+  label: string;
+  description: string;
+  effects: EventEffect[];
+  achievementHint?: string;
+}
+
+export interface EventDecisionTemplate {
+  prompt: string;
+  options: EventDecisionOption[];
+  defaultOptionIndex: number;
+  decisionWindowMonths: number;
+}
+
+export interface HistoricalEvent {
+  id: string;
+  name: string;
+  year: number;
+  month: number;
+  description: string;
+  isForced: boolean;
+  durationMonths: number;
+  effects: EventEffect[];
+  decisions?: EventDecisionTemplate[];
+  status: 'pending' | 'triggered' | 'expired';
+  triggeredAt: GameDate | null;
+  playerDecision: number | null;
+  isAchievementRelated: boolean;
+}
+
+export interface EventDecision {
+  id: EntityId;
+  eventId: string;
+  template: EventDecisionTemplate;
+  triggeredAt: GameDate;
+  expiresAt: GameDate;
+  isExpired: boolean;
+}
+
+export interface DecisionOutcome {
+  decisionId: EntityId;
+  optionIndex: number;
+  effectsApplied: EventEffect[];
+  description: string;
+}
+
+export interface GlobalModifier {
+  id: string;
+  sourceEventId: string;
+  effectType: EventEffectType;
+  value: number;
+  isMultiplier: boolean;
+  startDate: GameDate;
+  endDate: GameDate | null;
+  description: string;
+}
+
+export interface EconomicCycleState {
+  current: EconomicCycle;
+  monthsInCurrentPhase: number;
+  phaseDurationMonths: number;
+  modifiers: {
+    hardwareCostMod: number;
+    electricityMod: number;
+    clientBudgetMod: number;
+    recruitmentCostMod: number;
+  };
+}
+
+// ─── TechTree types ───────────────────────────────────────────────────────────
+
+export enum TechCategory {
+  Infrastructure  = 'INFRASTRUCTURE',
+  Performance     = 'PERFORMANCE',
+  CostControl     = 'COST_CONTROL',
+  SpaceInnovation = 'SPACE_INNOVATION',
+  Management      = 'MANAGEMENT',
+  ScaleEconomy    = 'SCALE_ECONOMY',
+  HRManagement    = 'HR_MANAGEMENT',
+  SecurityDefense = 'SECURITY_DEFENSE',
+  SupplyChain     = 'SUPPLY_CHAIN',
+  RiskControl     = 'RISK_CONTROL',
+  CloudCompete    = 'CLOUD_COMPETE',
+  AIInfra         = 'AI_INFRA',
+}
+
+export enum TechEffectType {
+  PUEReduction             = 'PUE_REDUCTION',
+  CapacityBonus            = 'CAPACITY_BONUS',
+  ExpansionCostReduction   = 'EXPANSION_COST_REDUCTION',
+  HardwareCostReduction    = 'HARDWARE_COST_REDUCTION',
+  ChipShortageReduction    = 'CHIP_SHORTAGE_REDUCTION',
+  ExchangeRateReduction    = 'EXCHANGE_RATE_REDUCTION',
+  ComplianceBonus          = 'COMPLIANCE_BONUS',
+  SecurityEventReduction   = 'SECURITY_EVENT_REDUCTION',
+  RansomwareImmunity       = 'RANSOMWARE_IMMUNITY',
+  DDoSReduction            = 'DDOS_REDUCTION',
+  APTDetectionBonus        = 'APT_DETECTION_BONUS',
+  SocialEngReduction       = 'SOCIAL_ENG_REDUCTION',
+  SLABreachRateReduction   = 'SLA_BREACH_REDUCTION',
+  ServiceUnlock            = 'SERVICE_UNLOCK',
+  ManagementCapacityBonus  = 'MGMT_CAPACITY_BONUS',
+  PromotionTimeReduction   = 'PROMOTION_TIME_REDUCTION',
+  ResignationRateReduction = 'RESIGNATION_REDUCTION',
+  CreditRatingBonus        = 'CREDIT_RATING_BONUS',
+  InsuranceCostReduction   = 'INSURANCE_COST_REDUCTION',
+  PurchaseDelayReduction   = 'PURCHASE_DELAY_REDUCTION',
+  IncidentResponseBonus    = 'INCIDENT_RESPONSE_BONUS',
+  AuditPassRateBonus       = 'AUDIT_PASS_RATE_BONUS',
+  AIServiceRevenueBonus    = 'AI_SERVICE_REVENUE_BONUS',
+  AICapacityBonus          = 'AI_CAPACITY_BONUS',
+}
+
+export interface TechNodeEffect {
+  type: TechEffectType;
+  value: number;
+  description: string;
+}
+
+export interface TechNode {
+  id: string;
+  name: string;
+  category: TechCategory;
+  description: string;
+  effects: TechNodeEffect[];
+  prerequisites: string[];
+  mutuallyExclusiveWith?: string[];
+  mutuallyExclusiveGroupId?: string;
+  investmentCostNTD: Money;
+  implementationMonths: number;
+  unlockYear: number;
+  status: TechNodeStatus;
+  progressMonths: number;
+  startedAt: GameDate | null;
+  completedAt: GameDate | null;
+}
+
+export interface TechTreeEffect {
+  nodeId: string;
+  nodeName: string;
+  type: TechEffectType;
+  value: number;
+  description: string;
+}
+
+// ─── Reputation types ─────────────────────────────────────────────────────────
+
+export interface SatisfactionSnapshot {
+  date: GameDate;
+  score: number;
+  delta: number;
+  topPositiveFactors: string[];
+  topNegativeFactors: string[];
+}
+
+export interface SatisfactionModifier {
+  id: string;
+  description: string;
+  delta: number;
+  isOneTime: boolean;
+  source: string;
+  appliedAt: GameDate;
+  expiresAt: GameDate | null;
+}
+
+export interface ReputationEffects {
+  rfpFrequencyMod: number;
+  renewalSuccessRateBonus: number;
+  pricingPower: number;
+  contractLossProbabilityMod: number;
+}
+
+// ─── New config types ─────────────────────────────────────────────────────────
+
+export interface StaffRoleConfig {
+  baseSalaryNTD: Money;
+  managementCapacityU: number;
+  handlingPower: number;
+  recruitmentMonths: number;
+  promotionRequirements: { minMonths: number; cost: Money };
+  unlockYear: number;
+  unlockCondition?: string;
+}
+
+export interface StaffConfig {
+  roles: Record<StaffRole, StaffRoleConfig>;
+  benefitMultiplier: number;
+  baseAnnualResignationRate: number;
+  salaryInflationRate: number;
+  coverageRatioThresholds: {
+    optimal: number;
+    warning: number;
+    critical: number;
+    severe: number;
+  };
+  interviewQuestionCount: number;
+  severanceMonthsPerYear: number;
+}
+
+export interface SecurityConfig {
+  baseIncidentRates: Record<IncidentType, number>;
+  incidentSeverity: Record<IncidentType, IncidentSeverity>;
+  baseResolutionHours: Record<IncidentType, number>;
+  deadlineHours: Record<IncidentSeverity, number>;
+  hourlyLossRate: Record<IncidentSeverity, number>;
+  complianceScoreThresholds: {
+    bonus: number;
+    neutral: number;
+    penalty1: number;
+    penalty2: number;
+  };
+  ransomPaymentRate: number;
+  dataBreachReportWindowHours: number;
+}
+
+export interface EventTimelineConfig {
+  economicCycleDurationRange: [number, number];
+  randomEventCooldownRange: [number, number];
+  baseInflationRate: number;
+  inflationVolatility: number;
+  baseExchangeRate: number;
+  exchangeRateMonthlyVolatility: number;
+}
+
+export interface TechTreeConfig {
+  cancelRefundRate: number;
+  milestoneRequiredNodes: number;
+}
+
+export interface ReputationConfig {
+  initialScore: number;
+  naturalRecoveryPerMonth: number;
+  naturalRecoveryThreshold: number;
+  highSatisfactionThreshold: number;
+  lowSatisfactionThreshold: number;
+  criticalSatisfactionThreshold: number;
+  renewalBonusAtHighSatisfaction: number;
+  priceIncreaseRange: [number, number];
 }
 
 // ─── Time engine payloads ─────────────────────────────────────────────────────

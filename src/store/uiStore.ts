@@ -31,6 +31,15 @@ import type { FacilityManager } from '../game/modules/FacilityManager';
 import type { HardwareCatalog } from '../game/modules/HardwareCatalog';
 import type { SoftwareCatalog } from '../game/modules/SoftwareCatalog';
 import type { ContractManager } from '../game/modules/ContractManager';
+import type { StaffManager } from '../game/modules/StaffManager';
+import type { SecurityEngine } from '../game/modules/SecurityEngine';
+import type { EventTimeline } from '../game/modules/EventTimeline';
+import type { TechTree } from '../game/modules/TechTree';
+import type { ReputationEngine } from '../game/modules/ReputationEngine';
+import type {
+  StaffMember, JobOpening, ShiftMode, Incident, TechNode, HistoricalEvent,
+  GlobalModifier, EconomicCycleState, EventDecision,
+} from '../game/core/types';
 
 export interface UIState {
   // Time
@@ -62,6 +71,29 @@ export interface UIState {
   activeContracts: Contract[];
   monthlyRevenueEstimate: Money;
 
+  // Staff
+  staffList: StaffMember[];
+  jobOpenings: JobOpening[];
+  shiftMode: ShiftMode | null;
+  monthlyPayroll: Money;
+
+  // Security
+  activeIncidents: Incident[];
+  securityPostureScore: number;
+  securityComplianceScore: number;
+
+  // EventTimeline
+  triggeredEvents: HistoricalEvent[];
+  activeModifiers: GlobalModifier[];
+  pendingDecisions: EventDecision[];
+  economicCycle: EconomicCycleState | null;
+
+  // TechTree
+  techNodes: TechNode[];
+
+  // Reputation
+  satisfactionScore: number;
+
   // Engine ref (not reactive, just for actions)
   _engine: GameEngine | null;
 
@@ -80,6 +112,12 @@ export interface UIState {
   submitContractBid: (rfpId: string, bid: BidParams) => void;
   declineRFP: (rfpId: string) => void;
   declineContractRenewal: (contractId: string) => void;
+  postJobOpening: (role: import('../game/core/types').StaffRole) => void;
+  hireStaff: (openingId: string) => void;
+  layoffStaff: (staffId: string) => void;
+  startTechResearch: (nodeId: string) => void;
+  cancelTechResearch: (nodeId: string) => void;
+  makeTimelineDecision: (decisionId: string, optionIndex: number) => void;
   _connectEngine: (engine: GameEngine) => void;
 }
 
@@ -101,6 +139,25 @@ export const useUIStore = create<UIState>((set, get) => ({
   pendingRFPs: [],
   activeContracts: [],
   monthlyRevenueEstimate: 0,
+
+  staffList: [],
+  jobOpenings: [],
+  shiftMode: null,
+  monthlyPayroll: 0,
+
+  activeIncidents: [],
+  securityPostureScore: 100,
+  securityComplianceScore: 70,
+
+  triggeredEvents: [],
+  activeModifiers: [],
+  pendingDecisions: [],
+  economicCycle: null,
+
+  techNodes: [],
+
+  satisfactionScore: 75,
+
   _engine: null,
 
   setSpeed(speed) {
@@ -205,6 +262,54 @@ export const useUIStore = create<UIState>((set, get) => ({
     set({ activeContracts: cm.getActiveContracts() });
   },
 
+  postJobOpening(role) {
+    const engine = get()._engine;
+    if (!engine) return;
+    const sm = engine.getModule<StaffManager>('StaffManager');
+    sm.postJobOpening(role);
+    set({ jobOpenings: sm.getJobOpenings() });
+  },
+
+  hireStaff(openingId) {
+    const engine = get()._engine;
+    if (!engine) return;
+    const sm = engine.getModule<StaffManager>('StaffManager');
+    sm.hire(openingId);
+    set({ staffList: sm.getStaff(), jobOpenings: sm.getJobOpenings(), monthlyPayroll: sm.calculateMonthlyPayroll() });
+  },
+
+  layoffStaff(staffId) {
+    const engine = get()._engine;
+    if (!engine) return;
+    const sm = engine.getModule<StaffManager>('StaffManager');
+    sm.layoff(staffId);
+    set({ staffList: sm.getStaff(), monthlyPayroll: sm.calculateMonthlyPayroll() });
+  },
+
+  startTechResearch(nodeId) {
+    const engine = get()._engine;
+    if (!engine) return;
+    const tt = engine.getModule<TechTree>('TechTree');
+    tt.startResearch(nodeId);
+    set({ techNodes: tt.getNodes() });
+  },
+
+  cancelTechResearch(nodeId) {
+    const engine = get()._engine;
+    if (!engine) return;
+    const tt = engine.getModule<TechTree>('TechTree');
+    tt.cancelResearch(nodeId);
+    set({ techNodes: tt.getNodes() });
+  },
+
+  makeTimelineDecision(decisionId, optionIndex) {
+    const engine = get()._engine;
+    if (!engine) return;
+    const et = engine.getModule<EventTimeline>('EventTimeline');
+    et.makeDecision(decisionId, optionIndex);
+    set({ pendingDecisions: et.getPendingDecisions(), activeModifiers: et.getActiveModifiers() });
+  },
+
   _connectEngine(engine) {
     const time = engine.getModule<TimeEngine>('TimeEngine');
     const finance = engine.getModule<FinanceEngine>('FinanceEngine');
@@ -212,6 +317,11 @@ export const useUIStore = create<UIState>((set, get) => ({
     const hw = engine.getModule<HardwareCatalog>('HardwareCatalog');
     const sw = engine.getModule<SoftwareCatalog>('SoftwareCatalog');
     const cm = engine.getModule<ContractManager>('ContractManager');
+    const sm = engine.getModule<StaffManager>('StaffManager');
+    const sec = engine.getModule<SecurityEngine>('SecurityEngine');
+    const et = engine.getModule<EventTimeline>('EventTimeline');
+    const tt = engine.getModule<TechTree>('TechTree');
+    const rep = engine.getModule<ReputationEngine>('ReputationEngine');
 
     set({
       _engine: engine,
@@ -232,6 +342,19 @@ export const useUIStore = create<UIState>((set, get) => ({
       pendingRFPs: cm.getPendingRFPs(),
       activeContracts: cm.getActiveContracts(),
       monthlyRevenueEstimate: cm.getMonthlyRevenueEstimate(),
+      staffList: sm.getStaff(),
+      jobOpenings: sm.getJobOpenings(),
+      shiftMode: sm.getShiftMode(),
+      monthlyPayroll: sm.calculateMonthlyPayroll(),
+      activeIncidents: sec.getActiveIncidents(),
+      securityPostureScore: sec.getSecurityPostureScore(),
+      securityComplianceScore: sec.getComplianceScore(),
+      triggeredEvents: et.getTriggeredEvents(),
+      activeModifiers: et.getActiveModifiers(),
+      pendingDecisions: et.getPendingDecisions(),
+      economicCycle: et.getEconomicCycle(),
+      techNodes: tt.getNodes(),
+      satisfactionScore: rep.getSatisfactionScore(),
     });
 
     const bus = engine.bus;
@@ -251,6 +374,19 @@ export const useUIStore = create<UIState>((set, get) => ({
         pendingRFPs: cm.getPendingRFPs(),
         activeContracts: cm.getActiveContracts(),
         monthlyRevenueEstimate: cm.getMonthlyRevenueEstimate(),
+        staffList: sm.getStaff(),
+        jobOpenings: sm.getJobOpenings(),
+        shiftMode: sm.getShiftMode(),
+        monthlyPayroll: sm.calculateMonthlyPayroll(),
+        activeIncidents: sec.getActiveIncidents(),
+        securityPostureScore: sec.getSecurityPostureScore(),
+        securityComplianceScore: sec.getComplianceScore(),
+        triggeredEvents: et.getTriggeredEvents(),
+        activeModifiers: et.getActiveModifiers(),
+        pendingDecisions: et.getPendingDecisions(),
+        economicCycle: et.getEconomicCycle(),
+        techNodes: tt.getNodes(),
+        satisfactionScore: rep.getSatisfactionScore(),
       });
     });
 
@@ -303,6 +439,54 @@ export const useUIStore = create<UIState>((set, get) => ({
 
     bus.subscribe('software.compliance_changed', () => {
       set({ complianceScore: sw.getComplianceScore() });
+    });
+
+    bus.subscribe('staff.hired', () => {
+      set({ staffList: sm.getStaff(), jobOpenings: sm.getJobOpenings(), monthlyPayroll: sm.calculateMonthlyPayroll() });
+    });
+
+    bus.subscribe('staff.laid_off', () => {
+      set({ staffList: sm.getStaff(), monthlyPayroll: sm.calculateMonthlyPayroll() });
+    });
+
+    bus.subscribe('staff.resigned', () => {
+      set({ staffList: sm.getStaff(), monthlyPayroll: sm.calculateMonthlyPayroll() });
+    });
+
+    bus.subscribe('security.incident_triggered', () => {
+      set({ activeIncidents: sec.getActiveIncidents(), securityPostureScore: sec.getSecurityPostureScore() });
+    });
+
+    bus.subscribe('security.incident_resolved', () => {
+      set({ activeIncidents: sec.getActiveIncidents(), securityPostureScore: sec.getSecurityPostureScore() });
+    });
+
+    bus.subscribe('security.incident_timed_out', () => {
+      set({ activeIncidents: sec.getActiveIncidents() });
+    });
+
+    bus.subscribe('timeline.historical_event', () => {
+      set({ triggeredEvents: et.getTriggeredEvents(), activeModifiers: et.getActiveModifiers() });
+    });
+
+    bus.subscribe('timeline.decision_required', () => {
+      set({ pendingDecisions: et.getPendingDecisions() });
+    });
+
+    bus.subscribe('timeline.economic_cycle_changed', () => {
+      set({ economicCycle: et.getEconomicCycle() });
+    });
+
+    bus.subscribe('techtree.research_completed', () => {
+      set({ techNodes: tt.getNodes() });
+    });
+
+    bus.subscribe('techtree.research_started', () => {
+      set({ techNodes: tt.getNodes() });
+    });
+
+    bus.subscribe('reputation.satisfaction_changed', () => {
+      set({ satisfactionScore: rep.getSatisfactionScore() });
     });
   },
 }));

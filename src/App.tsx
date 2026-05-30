@@ -8,6 +8,11 @@ import { FacilityManager } from './game/modules/FacilityManager';
 import { HardwareCatalog } from './game/modules/HardwareCatalog';
 import { SoftwareCatalog } from './game/modules/SoftwareCatalog';
 import { ContractManager } from './game/modules/ContractManager';
+import { StaffManager } from './game/modules/StaffManager';
+import { SecurityEngine } from './game/modules/SecurityEngine';
+import { EventTimeline } from './game/modules/EventTimeline';
+import { TechTree } from './game/modules/TechTree';
+import { ReputationEngine } from './game/modules/ReputationEngine';
 import { DEFAULT_CONFIG } from './game/config/default.config';
 import { useUIStore } from './store/uiStore';
 
@@ -21,7 +26,12 @@ engine
   .register(new FacilityManager())
   .register(new HardwareCatalog())
   .register(new SoftwareCatalog())
-  .register(new ContractManager());
+  .register(new ContractManager())
+  .register(new StaffManager())
+  .register(new SecurityEngine())
+  .register(new EventTimeline())
+  .register(new TechTree())
+  .register(new ReputationEngine());
 
 const App: React.FC = () => {
   const [phase, setPhase] = useState<Phase>('boot');

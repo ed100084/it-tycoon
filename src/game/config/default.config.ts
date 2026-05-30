@@ -1,4 +1,7 @@
-import { CreditRating, FacilityRegion, CoolingLevel, ClimateRisk } from '../core/types';
+import {
+  CreditRating, FacilityRegion, CoolingLevel, ClimateRisk,
+  StaffRole, IncidentType, IncidentSeverity,
+} from '../core/types';
 import type { GameConfig } from '../core/types';
 
 export const DEFAULT_CONFIG: Readonly<GameConfig> = Object.freeze({
@@ -129,5 +132,111 @@ export const DEFAULT_CONFIG: Readonly<GameConfig> = Object.freeze({
       lowSatisfactionProlonged: 0.30,
       competitorOffer: 0.20,
     },
+  },
+
+  staff: {
+    roles: {
+      [StaffRole.E1_NOC]:       { baseSalaryNTD: 38_000, managementCapacityU: 10, handlingPower: 0.5, recruitmentMonths: 0.5, promotionRequirements: { minMonths: 12, cost: 50_000  }, unlockYear: 2000 },
+      [StaffRole.E2_SysEng]:    { baseSalaryNTD: 55_000, managementCapacityU: 20, handlingPower: 1.0, recruitmentMonths: 1,   promotionRequirements: { minMonths: 18, cost: 80_000  }, unlockYear: 2000 },
+      [StaffRole.E3_SecAna]:    { baseSalaryNTD: 72_000, managementCapacityU: 30, handlingPower: 2.0, recruitmentMonths: 1.5, promotionRequirements: { minMonths: 24, cost: 120_000 }, unlockYear: 2001 },
+      [StaffRole.E3_Senior]:    { baseSalaryNTD: 75_000, managementCapacityU: 35, handlingPower: 2.0, recruitmentMonths: 1.5, promotionRequirements: { minMonths: 24, cost: 120_000 }, unlockYear: 2001 },
+      [StaffRole.E4_CloudArch]: { baseSalaryNTD: 110_000, managementCapacityU: 50, handlingPower: 4.0, recruitmentMonths: 2, promotionRequirements: { minMonths: 36, cost: 200_000 }, unlockYear: 2005 },
+      [StaffRole.E4_AIEng]:     { baseSalaryNTD: 120_000, managementCapacityU: 40, handlingPower: 4.0, recruitmentMonths: 2, promotionRequirements: { minMonths: 36, cost: 200_000 }, unlockYear: 2018 },
+      [StaffRole.E5_CISO]:      { baseSalaryNTD: 180_000, managementCapacityU: 80, handlingPower: 8.0, recruitmentMonths: 3, promotionRequirements: { minMonths: 48, cost: 400_000 }, unlockYear: 2004 },
+    },
+    benefitMultiplier: 1.3,
+    baseAnnualResignationRate: 0.10,
+    salaryInflationRate: 0.025,
+    coverageRatioThresholds: { optimal: 1.0, warning: 0.7, critical: 0.5, severe: 0.3 },
+    interviewQuestionCount: 3,
+    severanceMonthsPerYear: 1,
+  },
+
+  security: {
+    baseIncidentRates: {
+      [IncidentType.HardwareFailure]:   0.05,
+      [IncidentType.NetworkOutage]:     0.04,
+      [IncidentType.CapacityAlarm]:     0.08,
+      [IncidentType.PowerAnomaly]:      0.03,
+      [IncidentType.CoolingFailure]:    0.02,
+      [IncidentType.Ransomware]:        0.015,
+      [IncidentType.DataBreach]:        0.01,
+      [IncidentType.SocialEngineering]: 0.02,
+      [IncidentType.APTAttack]:         0.005,
+      [IncidentType.DDoS]:              0.025,
+      [IncidentType.ComplianceGap]:     0.03,
+      [IncidentType.InsiderThreat]:     0.008,
+      [IncidentType.SupplyChainAttack]: 0.005,
+    },
+    incidentSeverity: {
+      [IncidentType.HardwareFailure]:   IncidentSeverity.P3,
+      [IncidentType.NetworkOutage]:     IncidentSeverity.P2,
+      [IncidentType.CapacityAlarm]:     IncidentSeverity.P3,
+      [IncidentType.PowerAnomaly]:      IncidentSeverity.P2,
+      [IncidentType.CoolingFailure]:    IncidentSeverity.P2,
+      [IncidentType.Ransomware]:        IncidentSeverity.P1,
+      [IncidentType.DataBreach]:        IncidentSeverity.P1,
+      [IncidentType.SocialEngineering]: IncidentSeverity.P3,
+      [IncidentType.APTAttack]:         IncidentSeverity.P1,
+      [IncidentType.DDoS]:              IncidentSeverity.P2,
+      [IncidentType.ComplianceGap]:     IncidentSeverity.P4,
+      [IncidentType.InsiderThreat]:     IncidentSeverity.P2,
+      [IncidentType.SupplyChainAttack]: IncidentSeverity.P2,
+    },
+    baseResolutionHours: {
+      [IncidentType.HardwareFailure]:   8,
+      [IncidentType.NetworkOutage]:     4,
+      [IncidentType.CapacityAlarm]:     2,
+      [IncidentType.PowerAnomaly]:      6,
+      [IncidentType.CoolingFailure]:    6,
+      [IncidentType.Ransomware]:        72,
+      [IncidentType.DataBreach]:        48,
+      [IncidentType.SocialEngineering]: 12,
+      [IncidentType.APTAttack]:         96,
+      [IncidentType.DDoS]:              8,
+      [IncidentType.ComplianceGap]:     24,
+      [IncidentType.InsiderThreat]:     36,
+      [IncidentType.SupplyChainAttack]: 48,
+    },
+    deadlineHours: {
+      [IncidentSeverity.P1]: 4,
+      [IncidentSeverity.P2]: 8,
+      [IncidentSeverity.P3]: 24,
+      [IncidentSeverity.P4]: 48,
+    },
+    hourlyLossRate: {
+      [IncidentSeverity.P1]: 0.05,
+      [IncidentSeverity.P2]: 0.02,
+      [IncidentSeverity.P3]: 0.005,
+      [IncidentSeverity.P4]: 0.001,
+    },
+    complianceScoreThresholds: { bonus: 80, neutral: 60, penalty1: 40, penalty2: 0 },
+    ransomPaymentRate: 0.20,
+    dataBreachReportWindowHours: 72,
+  },
+
+  eventTimeline: {
+    economicCycleDurationRange: [8, 15] as [number, number],
+    randomEventCooldownRange: [2, 6] as [number, number],
+    baseInflationRate: 0.02,
+    inflationVolatility: 0.005,
+    baseExchangeRate: 30.0,
+    exchangeRateMonthlyVolatility: 0.003,
+  },
+
+  techTree: {
+    cancelRefundRate: 0.50,
+    milestoneRequiredNodes: 20,
+  },
+
+  reputation: {
+    initialScore: 75,
+    naturalRecoveryPerMonth: 1,
+    naturalRecoveryThreshold: 80,
+    highSatisfactionThreshold: 80,
+    lowSatisfactionThreshold: 50,
+    criticalSatisfactionThreshold: 40,
+    renewalBonusAtHighSatisfaction: 0.40,
+    priceIncreaseRange: [0.05, 0.15] as [number, number],
   },
 });
