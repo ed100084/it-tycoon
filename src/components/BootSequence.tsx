@@ -1,29 +1,40 @@
 import React, { useEffect, useState } from 'react';
 
-const APP_VERSION = 'v3.0';
+const G = 'var(--accent-green)';
+const B = 'var(--accent-blue)';
+const C = 'var(--accent-cyan)';
+const D = 'var(--text-dim)';
+const R = 'var(--accent-red)';
+const Y = 'var(--accent-yellow)';
+const P = 'var(--accent-purple)';
+const H = 'var(--text-heading)';
 
 const BOOT_LINES = [
-  { text: `┌─ IT-TYCOON DATACENTER MANAGEMENT SYSTEM ${APP_VERSION} ─────────────┐`, delay: 0,    color: 'var(--tm-blue)', bold: true },
-  { text: '│  Management Sim · React 19 · TypeScript · Zustand          │', delay: 80,   color: 'var(--tm-text-dim)' },
-  { text: '└────────────────────────────────────────────────────────────┘', delay: 130,  color: 'var(--tm-blue)' },
-  { text: '', delay: 160 },
-  { text: '  [OK]   EventBus ....................................... READY', delay: 220,  color: 'var(--tm-green)' },
-  { text: '  [OK]   TimeEngine (2000/01) .......................... READY', delay: 310,  color: 'var(--tm-green)' },
-  { text: '  [OK]   FinanceEngine (NT$5,000,000) .................. READY', delay: 400,  color: 'var(--tm-green)' },
-  { text: '  [OK]   Save system ................................... READY', delay: 490,  color: 'var(--tm-green)' },
-  { text: '', delay: 540 },
-  { text: '  [DC]   North Zone  · 100U capacity .................. ONLINE', delay: 620,  color: 'var(--tm-cyan)' },
-  { text: '  [LOCK] Central Zone ................................. OFFLINE', delay: 720,  color: 'var(--tm-red)' },
-  { text: '  [LOCK] South Zone ................................... OFFLINE', delay: 820,  color: 'var(--tm-red)' },
-  { text: '', delay: 870 },
-  { text: '  $ systemctl start time-engine ........................ done', delay: 960,  color: 'var(--tm-text-dim)' },
-  { text: '  $ systemctl start finance-engine ..................... done', delay: 1050, color: 'var(--tm-text-dim)' },
-  { text: '', delay: 1100 },
-  { text: '  ✓ SYSTEM READY — WELCOME, ADMINISTRATOR', delay: 1260, color: 'var(--tm-blue)', bold: true },
-  { text: '  # Fiscal year begins: 2000/01. Angel round: NT$5M.', delay: 1400, color: 'var(--tm-purple)' },
-  { text: '  # Reminder: All purchases > NT$5M require a signed 採購申請書.', delay: 1550, color: 'var(--tm-yellow)' },
-  { text: '', delay: 1630 },
-  { text: '  administrator@itdcms:~$ _', delay: 1750, color: 'var(--tm-cyan)', blink: true },
+  { text: '╔══════════════════════════════════════════════════════════════╗', delay: 0,    color: B, bold: true },
+  { text: '║  IT-TYCOON DATACENTER MANAGEMENT SYSTEM                     ║', delay: 60,   color: H, bold: true },
+  { text: '║  Infrastructure Management Division  ·  BIOS POST v3.0      ║', delay: 110,  color: D },
+  { text: '╚══════════════════════════════════════════════════════════════╝', delay: 150,  color: B, bold: true },
+  { text: '', delay: 180 },
+  { text: '  Initializing hardware inventory catalog .............. [DONE]', delay: 260,  color: G },
+  { text: '  Loading software license registry ................... [DONE]', delay: 370,  color: G },
+  { text: '  Starting finance engine  (NT$5,000,000) ............. [DONE]', delay: 470,  color: G },
+  { text: '  Connecting to time engine  (2000/01) ................ [DONE]', delay: 560,  color: G },
+  { text: '  Initializing contract management system ............. [DONE]', delay: 650,  color: G },
+  { text: '  Loading staff management module ..................... [DONE]', delay: 740,  color: G },
+  { text: '  Starting security monitoring engine ................. [DONE]', delay: 830,  color: G },
+  { text: '  Building technology research tree ................... [DONE]', delay: 910,  color: G },
+  { text: '  Loading reputation & SLA engine ..................... [DONE]', delay: 990,  color: G },
+  { text: '', delay: 1020 },
+  { text: '  ZONE DISCOVERY:', delay: 1080, color: D },
+  { text: '  [ONLINE]  North Zone    ·  100U rack space  ·  PUE 2.0', delay: 1150, color: C },
+  { text: '  [LOCKED]  Central Zone  ·  requires expansion unlock',   delay: 1240, color: R },
+  { text: '  [LOCKED]  South Zone    ·  requires expansion unlock',   delay: 1330, color: R },
+  { text: '', delay: 1370 },
+  { text: '  ► ALL SYSTEMS NOMINAL — READY TO OPERATE',              delay: 1480, color: G, bold: true },
+  { text: '  ► Fiscal year 2000/01  ·  Angel round: NT$5,000,000',   delay: 1590, color: P },
+  { text: '  ► Purchases > NT$5M require signed 採購申請書',          delay: 1700, color: Y },
+  { text: '', delay: 1740 },
+  { text: '  itdcms@datacenter:~$ _', delay: 1820, color: C, blink: true },
 ];
 
 interface Props {
@@ -43,8 +54,8 @@ export const BootSequence: React.FC<Props> = ({ onComplete }) => {
         if (i === BOOT_LINES.length - 1) {
           setTimeout(() => {
             setDone(true);
-            setTimeout(onComplete, 400);
-          }, 600);
+            setTimeout(onComplete, 350);
+          }, 550);
         }
       }, line.delay);
       timers.push(t);
@@ -61,11 +72,11 @@ export const BootSequence: React.FC<Props> = ({ onComplete }) => {
             key={i}
             className={`boot-line${line.blink ? ' blink' : ''}${done && i === visibleLines - 1 ? ' fade-out' : ''}`}
             style={{
-              color: line.color || 'var(--crt-green)',
-              fontWeight: line.bold ? 'bold' : 'normal',
+              color: line.color ?? 'var(--text)',
+              fontWeight: line.bold ? '700' : '400',
             }}
           >
-            {line.text || ' '}
+            {line.text || ' '}
           </div>
         ))}
       </div>
