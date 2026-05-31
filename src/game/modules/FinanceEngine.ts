@@ -187,6 +187,11 @@ export class FinanceEngine implements IGameModule {
       this.state.cash -= payload.amount;
     }, this.moduleId);
 
+    // Generic expense hook used by newer modules (TechDebt, Compliance, Energy, etc.)
+    bus.subscribe('finance.expense_requested', (e) => {
+      this.recordExpense(e.payload as ExpenseEntry);
+    }, this.moduleId);
+
     bus.subscribe('timeline.economic_modifier_changed', (e) => {
       const p = e.payload as {
         exchangeRateMod?: number;

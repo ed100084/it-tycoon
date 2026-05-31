@@ -42,6 +42,7 @@ interface Props {
   onSendForCertification?: (staffId: string, type: CertificationType) => void;
   onPayBonus?: () => void;
   onSetMentor?: (juniorId: string, mentorId: string | null) => void;
+  onSetShiftMode?: (mode: ShiftMode) => void;
 }
 
 function MoraleBar({ morale }: { morale: number }) {
@@ -56,10 +57,18 @@ function MoraleBar({ morale }: { morale: number }) {
   );
 }
 
+const SHIFT_LABELS: Record<ShiftMode, string> = {
+  [ShiftMode.DayOnly]:    '日間制',
+  [ShiftMode.TwoShift]:   '雙班制',
+  [ShiftMode.ThreeShift]: '三班制',
+  [ShiftMode.OnCall]:     'On-Call',
+  [ShiftMode.AIOps]:      'AIOps',
+};
+
 export const StaffPanel: React.FC<Props> = ({
   staffList, jobOpenings, shiftMode, monthlyPayroll,
   onPostOpening, onHire, onLayoff,
-  onSendForCertification, onPayBonus, onSetMentor,
+  onSendForCertification, onPayBonus, onSetMentor, onSetShiftMode,
 }) => {
   const [tab, setTab] = useState<'staff' | 'recruit' | 'develop'>('staff');
   const [selectedForCert, setSelectedForCert] = useState<string | null>(null);
@@ -150,8 +159,28 @@ export const StaffPanel: React.FC<Props> = ({
           )}
 
           {shiftMode && (
-            <div style={{ marginTop: 8, color: '#555', fontSize: 10 }}>
-              班別模式：<span style={{ color: '#88aaff' }}>{shiftMode}</span>
+            <div style={{ marginTop: 10, fontSize: 11 }}>
+              <span style={{ opacity: 0.7 }}>排班制度：</span>
+              <span style={{ color: '#88aaff', marginLeft: 4 }}>{SHIFT_LABELS[shiftMode] ?? shiftMode}</span>
+              {onSetShiftMode && (
+                <div style={{ display: 'flex', gap: 4, marginTop: 4, flexWrap: 'wrap' }}>
+                  {Object.values(ShiftMode).filter(m => m !== ShiftMode.AIOps).map(m => (
+                    <button
+                      key={m}
+                      className={`crt-btn${shiftMode === m ? ' active' : ''}`}
+                      style={{ fontSize: 10, padding: '2px 6px', ...(shiftMode === m ? { borderColor: 'var(--accent-cyan)', color: 'var(--accent-cyan)' } : {}) }}
+                      onClick={() => onSetShiftMode(m)}
+                    >
+                      {SHIFT_LABELS[m]}
+                    </button>
+                  ))}
+                </div>
+              )}
+              {shiftMode === ShiftMode.OnCall && (
+                <div style={{ color: 'var(--accent-yellow)', fontSize: 10, marginTop: 4 }}>
+                  ⚠ On-Call：夜間回應 ×1.5 | 士氣 -5/月 | 需人力 ×1.2
+                </div>
+              )}
             </div>
           )}
         </div>

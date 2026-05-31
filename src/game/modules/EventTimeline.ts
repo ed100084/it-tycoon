@@ -1,10 +1,12 @@
 import { addMonths } from '../../utils/gameDate';
 import { EconomicCycle, EventEffectType, IncidentType } from '../core/types';
 import type {
+  ActiveEventChain,
   ActiveRandomEvent,
   DecisionOutcome,
   EconomicCycleState,
   EntityId,
+  EventChain,
   EventDecision,
   EventEffect,
   EventTimelineConfig,
@@ -716,7 +718,11 @@ export class EventTimeline implements IGameModule {
   tick(_deltaMs: number): void {}
 
   serialize(): Record<string, unknown> {
-    return JSON.parse(JSON.stringify(this.state));
+    return {
+      ...JSON.parse(JSON.stringify(this.state)),
+      activeChains: this.activeChains,
+      chainTriggeredIds: [...this.chainTriggeredIds],
+    };
   }
 
   deserialize(raw: Record<string, unknown>): void {
@@ -731,6 +737,9 @@ export class EventTimeline implements IGameModule {
     this.state.exchangeRate = s.exchangeRate ?? this.cfg.baseExchangeRate;
     this.state.baseExchangeRate = s.baseExchangeRate ?? this.cfg.baseExchangeRate;
     this.state.exchangeRateMod = s.exchangeRateMod ?? 1.0;
+    this.activeChains = (raw.activeChains as ActiveEventChain[]) ?? [];
+    const ids = (raw.chainTriggeredIds as string[]) ?? [];
+    this.chainTriggeredIds = new Set(ids);
   }
 
   getState(): Readonly<Record<string, unknown>> {
@@ -872,6 +881,8 @@ export class EventTimeline implements IGameModule {
     this._advanceEconomicCycle();
     this._updateExchangeRate();
     this._tickRandomEventCooldown();
+    this._processActiveChains();
+    this._checkChainTriggers();
   }
 
   private _checkHistoricalEvents(): void {
@@ -1177,5 +1188,192 @@ export class EventTimeline implements IGameModule {
   private _rollCycleDuration(): number {
     const [min, max] = this.cfg.economicCycleDurationRange;
     return min + Math.floor(seededRand() * (max - min + 1));
+  }
+
+  // ─── Event chain system ───────────────────────────────────────────────────────
+
+  private activeChains: ActiveEventChain[] = [];
+  private chainTriggeredIds = new Set<string>();
+
+  private readonly chainDefs: EventChain[] = [
+    {
+      id: 'chip_shortage',
+      name: '晶片短缺危機鏈',
+      icon: '🔧',
+      description: '全球晶片短缺引發連鎖反應，影響硬體採購與客戶服務。',
+      triggerCondition: 'always',
+      triggerYear: 2021,
+      steps: [
+        { id: 'chip_1', name: '晶片短缺通報',     description: '全球晶片短缺，硬體供應受影響。',         resolutionWindowMonths: 3, consequence: '硬體交期延長 3 個月',             autoTriggerNextId: 'chip_2' },
+        { id: 'chip_2', name: '硬體交期延長',     description: '訂單延遲，新設備無法準時到貨。',        resolutionWindowMonths: 2, consequence: '客戶擴容需求無法滿足，SLA 違約',   autoTriggerNextId: 'chip_3' },
+        { id: 'chip_3', name: '客戶擴容受阻',     description: '客戶要求增加資源，但設備未到。',        resolutionWindowMonths: 2, consequence: 'SLA 大量違約，客戶滿意度下降',   autoTriggerNextId: null },
+      ],
+    },
+    {
+      id: 'talent_crisis',
+      name: '人才危機鏈',
+      icon: '👥',
+      description: '關鍵工程師離職引發知識斷層，維護品質下降。',
+      triggerCondition: 'staff_low',
+      triggerYear: 2005,
+      steps: [
+        { id: 'talent_1', name: '關鍵工程師離職',   description: '核心技術人員突然離職。',               resolutionWindowMonths: 2, consequence: '知識斷層，維護品質下降',           autoTriggerNextId: 'talent_2' },
+        { id: 'talent_2', name: '知識斷層',         description: '文件不完整，新人難以接手。',           resolutionWindowMonths: 3, consequence: '設備故障率上升 ×1.5',             autoTriggerNextId: 'talent_3' },
+        { id: 'talent_3', name: '維護品質下降',     description: '系統穩定性受影響，故障頻率上升。',    resolutionWindowMonths: 2, consequence: '客戶投訴增加，聲譽損失',           autoTriggerNextId: null },
+      ],
+    },
+    {
+      id: 'compliance_crisis',
+      name: '合規危機鏈',
+      icon: '📜',
+      description: '認證過期導致政府合約風險，引發營收下滑。',
+      triggerCondition: 'cert_expired',
+      steps: [
+        { id: 'comp_1', name: '認證到期警告',       description: '重要合規認證即將過期。',               resolutionWindowMonths: 1, consequence: '政府合約暫停',                   autoTriggerNextId: 'comp_2' },
+        { id: 'comp_2', name: '政府合約暫停',       description: '政府客戶暫停合約，等待重新認證。',    resolutionWindowMonths: 2, consequence: '營收下降 20%，現金流吃緊',       autoTriggerNextId: 'comp_3' },
+        { id: 'comp_3', name: '現金流吃緊',         description: '政府合約暫停導致月收入大幅下降。',    resolutionWindowMonths: 2, consequence: '信用評等下降一級',               autoTriggerNextId: null },
+      ],
+    },
+    {
+      id: 'energy_crisis',
+      name: '能源危機鏈',
+      icon: '⚡',
+      description: '電費暴漲引發成本危機，影響獲利率與董事會評價。',
+      triggerCondition: 'energy_spike',
+      triggerYear: 2022,
+      steps: [
+        { id: 'energy_1', name: '電費暴漲警告',     description: '能源市場動盪，電費大幅上漲。',        resolutionWindowMonths: 2, consequence: '每月額外電費支出 +50%',           autoTriggerNextId: 'energy_2' },
+        { id: 'energy_2', name: '成本激增',         description: '電費拖累整體成本結構。',               resolutionWindowMonths: 2, consequence: '毛利率暴跌 15%',                 autoTriggerNextId: 'energy_3' },
+        { id: 'energy_3', name: '毛利率暴跌',       description: '獲利率大幅下降，董事會關注。',        resolutionWindowMonths: 2, consequence: 'KPI 未達標，董事會警告',         autoTriggerNextId: null },
+      ],
+    },
+  ];
+
+  getActiveChains(): ActiveEventChain[] {
+    return this.activeChains.map(c => ({ ...c }));
+  }
+
+  triggerChain(chainId: string): void {
+    if (this.chainTriggeredIds.has(chainId)) return;
+    const def = this.chainDefs.find(c => c.id === chainId);
+    if (!def || def.steps.length === 0) return;
+
+    this.chainTriggeredIds.add(chainId);
+    const firstStep = def.steps[0];
+    const deadline = addMonths(this.currentDate, firstStep.resolutionWindowMonths);
+
+    const active: ActiveEventChain = {
+      chainId: def.id,
+      chainName: def.name,
+      chainIcon: def.icon,
+      currentStepIndex: 0,
+      stepStartDate: { ...this.currentDate },
+      resolutionDeadline: deadline,
+      isResolved: false,
+      isEscalated: false,
+    };
+    this.activeChains.push(active);
+
+    this.bus.publish({
+      type: 'timeline.chain_triggered',
+      payload: { chainId: def.id, chainName: def.name, chainIcon: def.icon, stepName: firstStep.name, description: def.description },
+      source: this.moduleId,
+      gameDate: this.currentDate,
+    });
+  }
+
+  resolveChainStep(chainId: string): string | null {
+    const active = this.activeChains.find(c => c.chainId === chainId && !c.isResolved);
+    if (!active) return '找不到活躍事件鏈';
+    const def = this.chainDefs.find(c => c.id === chainId);
+    if (!def) return '事件鏈定義遺失';
+
+    const stepIdx = active.currentStepIndex;
+    active.isResolved = true;
+
+    this.bus.publish({
+      type: 'timeline.chain_step_resolved',
+      payload: { chainId, stepIndex: stepIdx, stepName: def.steps[stepIdx].name },
+      source: this.moduleId,
+      gameDate: this.currentDate,
+    });
+
+    // Check if all steps done
+    if (stepIdx >= def.steps.length - 1) {
+      this.activeChains = this.activeChains.filter(c => c.chainId !== chainId);
+      this.bus.publish({
+        type: 'timeline.chain_completed',
+        payload: { chainId, chainName: def.name },
+        source: this.moduleId,
+        gameDate: this.currentDate,
+      });
+    } else {
+      // Advance to next step
+      this.activeChains = this.activeChains.filter(c => c.chainId !== chainId);
+      const nextStep = def.steps[stepIdx + 1];
+      const deadline = addMonths(this.currentDate, nextStep.resolutionWindowMonths);
+      this.activeChains.push({
+        ...active,
+        currentStepIndex: stepIdx + 1,
+        stepStartDate: { ...this.currentDate },
+        resolutionDeadline: deadline,
+        isResolved: false,
+        isEscalated: false,
+      });
+    }
+    return null;
+  }
+
+  private _processActiveChains(): void {
+    const stillActive: ActiveEventChain[] = [];
+    for (const chain of this.activeChains) {
+      if (chain.isResolved) continue;
+      const def = this.chainDefs.find(c => c.id === chain.chainId);
+      if (!def) continue;
+
+      const step = def.steps[chain.currentStepIndex];
+      const expired =
+        this.currentDate.year > chain.resolutionDeadline.year ||
+        (this.currentDate.year === chain.resolutionDeadline.year &&
+         this.currentDate.month >= chain.resolutionDeadline.month);
+
+      if (expired) {
+        this.bus.publish({
+          type: 'timeline.chain_escalated',
+          payload: { chainId: chain.chainId, stepName: step.name, consequence: step.consequence },
+          source: this.moduleId,
+          gameDate: this.currentDate,
+        });
+
+        if (chain.currentStepIndex >= def.steps.length - 1) {
+          // Last step expired — chain ends badly
+          continue; // remove from active
+        } else {
+          // Advance to next step automatically
+          const nextStep = def.steps[chain.currentStepIndex + 1];
+          const deadline = addMonths(this.currentDate, nextStep.resolutionWindowMonths);
+          stillActive.push({
+            ...chain,
+            currentStepIndex: chain.currentStepIndex + 1,
+            stepStartDate: { ...this.currentDate },
+            resolutionDeadline: deadline,
+            isEscalated: true,
+          });
+        }
+      } else {
+        stillActive.push(chain);
+      }
+    }
+    this.activeChains = stillActive;
+  }
+
+  private _checkChainTriggers(): void {
+    for (const def of this.chainDefs) {
+      if (this.chainTriggeredIds.has(def.id)) continue;
+      if (def.triggerYear && this.currentDate.year < def.triggerYear) continue;
+      if (def.triggerCondition === 'always' && def.triggerYear && this.currentDate.year === def.triggerYear && this.currentDate.month === 1) {
+        this.triggerChain(def.id);
+      }
+    }
   }
 }

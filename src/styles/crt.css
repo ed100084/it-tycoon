@@ -2102,3 +2102,43 @@
 .rack-fault {
   animation: rackFaultLED 0.8s ease-in-out infinite;
 }
+
+/* ─── Tech Debt ────────────────────────────────────────────────────────────── */
+.techdebt-panel .panel-header { font-size: 0.95em; }
+.techdebt-gauge-row { display: flex; align-items: center; gap: 8px; }
+.techdebt-bar-bg { background: #1a1a1a; height: 12px; border-radius: 2px; overflow: hidden; margin-top: 6px; }
+.techdebt-bar { height: 100%; border-radius: 2px; transition: width 0.4s; }
+.techdebt-item-row { font-size: 0.82em; padding: 2px 0; border-bottom: 1px solid #1a1a1a; }
+.techdebt-warning { font-size: 0.85em; animation: pulse 1.5s infinite; }
+.techdebt-refactor { display: flex; align-items: center; flex-wrap: wrap; gap: 4px; }
+
+/* ─── Compliance ───────────────────────────────────────────────────────────── */
+.compliance-panel .panel-header { font-size: 0.95em; }
+.compliance-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 10px; }
+.compliance-cert-card { background: #0d1117; border: 1px solid #1e2a38; border-radius: 4px; padding: 10px; }
+.cert-card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+.cert-name { font-size: 0.88em; font-weight: bold; }
+.cert-status-badge { font-size: 0.8em; padding: 1px 6px; border-radius: 2px; }
+.cert-progress-row { display: flex; align-items: center; margin-top: 4px; }
+.cert-progress-bar-bg { flex: 1; background: #1a1a1a; height: 6px; border-radius: 2px; overflow: hidden; }
+.cert-progress-bar { height: 100%; border-radius: 2px; transition: width 0.3s; }
+.cert-card-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 8px; }
+
+/* ─── Expansion ────────────────────────────────────────────────────────────── */
+.expansion-panel .panel-header { font-size: 0.95em; }
+.expansion-section-title { font-size: 0.88em; font-weight: bold; margin-bottom: 6px; }
+.expansion-target-card { background: #0d1117; border: 1px solid #1e2a38; border-radius: 4px; padding: 8px; margin-bottom: 8px; }
+.target-header { display: flex; align-items: center; margin-bottom: 4px; }
+.target-name { font-weight: bold; font-size: 0.9em; }
+.target-details { font-size: 0.82em; opacity: 0.8; }
+
+/* ─── Event Chains ─────────────────────────────────────────────────────────── */
+.event-chain-row { display: flex; align-items: center; gap: 4px; padding: 4px 0; border-bottom: 1px solid #1a1a1a; font-size: 0.88em; flex-wrap: wrap; }
+
+/* ─── Energy ───────────────────────────────────────────────────────────────── */
+.energy-panel .panel-header { font-size: 0.95em; }
+.energy-esg-row { display: flex; align-items: center; }
+.esg-bar-bg { background: #1a1a1a; height: 10px; border-radius: 2px; overflow: hidden; }
+.esg-bar { height: 100%; border-radius: 2px; transition: width 0.4s; }
+.energy-strategy-btn { font-size: 0.82em; }
+.energy-strategy-btn.active { border-color: var(--accent-cyan); color: var(--accent-cyan); }

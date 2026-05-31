@@ -15,6 +15,10 @@ import { CustomerPanel } from './panels/CustomerPanel';
 import { VendorPanel } from './panels/VendorPanel';
 import { BoardPanel } from './panels/BoardPanel';
 import { StrategyPanel } from './panels/StrategyPanel';
+import { TechDebtPanel } from './panels/TechDebtPanel';
+import { CompliancePanel } from './panels/CompliancePanel';
+import { ExpansionPanel } from './panels/ExpansionPanel';
+import { EnergyPanel } from './panels/EnergyPanel';
 import { TutorialOverlay } from './ui/TutorialOverlay';
 import { ToastContainer } from './ui/ToastContainer';
 import { EventModal } from './ui/EventModal';
@@ -35,7 +39,8 @@ function fmtCash(n: number): string {
 type CenterTab =
   | 'facility' | 'hardware' | 'software' | 'contract'
   | 'staff' | 'security' | 'timeline' | 'techtree' | 'reputation'
-  | 'customers' | 'vendors' | 'board' | 'strategy';
+  | 'customers' | 'vendors' | 'board' | 'strategy'
+  | 'compliance' | 'energy';
 
 const TAB_LABELS: Record<CenterTab, string> = {
   facility:   '🏢 機房',
@@ -51,12 +56,14 @@ const TAB_LABELS: Record<CenterTab, string> = {
   vendors:    '🏭 供應商',
   board:      '📊 董事會',
   strategy:   '🗺️ 策略',
+  compliance: '📜 合規',
+  energy:     '⚡ 能源',
 };
 
 const TAB_ORDER: CenterTab[] = [
   'facility', 'hardware', 'software', 'contract',
   'staff', 'security', 'timeline', 'techtree', 'reputation',
-  'customers', 'vendors', 'board', 'strategy',
+  'customers', 'vendors', 'board', 'strategy', 'compliance', 'energy',
 ];
 
 export const GameLayout: React.FC = () => {
@@ -84,12 +91,21 @@ export const GameLayout: React.FC = () => {
     boardKPIs, boardYearResults, boardGameOver, boardPendingReview,
     drDrills,
     isPaused,
+    techDebtPoints, techDebtLevel, techDebtItems,
+    complianceCerts, expiredCertCount,
+    expansionTargets, hasSecondFacility,
+    energyState,
+    activeEventChains,
     postJobOpening, hireStaff, layoffStaff,
     startTechResearch, cancelTechResearch,
     makeTimelineDecision, resolveRandomEvent,
     scheduleMaintenance, performGeneratorMaintenance,
     sendForCertification, payStaffBonus, setMentor,
     startDRDrill, acknowledgeBoard,
+    startRefactoring, startCertAcquisition,
+    acquireExpansionTarget, openSecondFacility,
+    setEnergyStrategy, installSolar, installStorage,
+    resolveEventChain, setOnCallMode,
     setSpeed,
   } = useUIStore();
 
@@ -403,6 +419,9 @@ export const GameLayout: React.FC = () => {
                 {tab === 'board' && boardGameOver && (
                   <span className="tab-badge danger">!</span>
                 )}
+                {tab === 'compliance' && expiredCertCount > 0 && (
+                  <span className="tab-badge danger">{expiredCertCount}</span>
+                )}
               </button>
             ))}
             <div className="tab-satisfaction">
@@ -415,15 +434,23 @@ export const GameLayout: React.FC = () => {
 
           <div className="tab-content">
             {centerTab === 'facility' && (
-              <FacilityManagerPanel
-                regions={facilityRegions}
-                maintenanceStates={maintenanceStates}
-                onUpgradeCooling={upgradeCooling}
-                onExpandCapacity={expandCapacity}
-                onUnlockRegion={unlockRegion}
-                onScheduleMaintenance={scheduleMaintenance}
-                onGeneratorMaintenance={performGeneratorMaintenance}
-              />
+              <>
+                <FacilityManagerPanel
+                  regions={facilityRegions}
+                  maintenanceStates={maintenanceStates}
+                  onUpgradeCooling={upgradeCooling}
+                  onExpandCapacity={expandCapacity}
+                  onUnlockRegion={unlockRegion}
+                  onScheduleMaintenance={scheduleMaintenance}
+                  onGeneratorMaintenance={performGeneratorMaintenance}
+                />
+                <TechDebtPanel
+                  totalPoints={techDebtPoints}
+                  level={techDebtLevel}
+                  items={techDebtItems}
+                  onStartRefactoring={startRefactoring}
+                />
+              </>
             )}
             {centerTab === 'hardware' && (
               <HardwareCatalogPanel
@@ -466,6 +493,7 @@ export const GameLayout: React.FC = () => {
                 onSendForCertification={sendForCertification}
                 onPayBonus={payStaffBonus}
                 onSetMentor={setMentor}
+                onSetShiftMode={setOnCallMode}
               />
             )}
             {centerTab === 'security' && (
@@ -478,15 +506,42 @@ export const GameLayout: React.FC = () => {
               />
             )}
             {centerTab === 'timeline' && (
-              <EventTimelinePanel
-                triggeredEvents={triggeredEvents}
-                activeModifiers={activeModifiers}
-                pendingDecisions={pendingDecisions}
-                activeRandomEvents={activeRandomEvents}
-                economicCycle={economicCycle}
-                onMakeDecision={makeTimelineDecision}
-                onResolveRandomEvent={resolveRandomEvent}
-              />
+              <>
+                {activeEventChains.length > 0 && (
+                  <div className="crt-panel" style={{ marginBottom: 12 }}>
+                    <div className="panel-header" style={{ color: 'var(--accent-red)' }}>
+                      🔗 活躍事件鏈 ({activeEventChains.length})
+                    </div>
+                    <div className="panel-body">
+                      {activeEventChains.map(chain => (
+                        <div key={chain.chainId} className="event-chain-row">
+                          <span>{chain.chainIcon} {chain.chainName}</span>
+                          {chain.isEscalated && <span style={{ color: 'var(--accent-red)', marginLeft: 8 }}>⬆ 已升級</span>}
+                          <span style={{ opacity: 0.7, marginLeft: 8, fontSize: '0.85em' }}>
+                            步驟 {chain.currentStepIndex + 1} | 截止 {chain.resolutionDeadline.year}/{chain.resolutionDeadline.month}
+                          </span>
+                          <button
+                            className="crt-btn"
+                            style={{ marginLeft: 8, fontSize: '0.8em' }}
+                            onClick={() => resolveEventChain(chain.chainId)}
+                          >
+                            化解
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                <EventTimelinePanel
+                  triggeredEvents={triggeredEvents}
+                  activeModifiers={activeModifiers}
+                  pendingDecisions={pendingDecisions}
+                  activeRandomEvents={activeRandomEvents}
+                  economicCycle={economicCycle}
+                  onMakeDecision={makeTimelineDecision}
+                  onResolveRandomEvent={resolveRandomEvent}
+                />
+              </>
             )}
             {centerTab === 'techtree' && (
               <TechTreePanel
@@ -519,10 +574,35 @@ export const GameLayout: React.FC = () => {
               />
             )}
             {centerTab === 'strategy' && (
-              <StrategyPanel
-                strategyScores={strategyScores}
-                strategyDominantRoute={strategyDominantRoute}
-                strategyEstablishedRoutes={strategyEstablishedRoutes}
+              <>
+                <StrategyPanel
+                  strategyScores={strategyScores}
+                  strategyDominantRoute={strategyDominantRoute}
+                  strategyEstablishedRoutes={strategyEstablishedRoutes}
+                />
+                <ExpansionPanel
+                  targets={expansionTargets}
+                  currentYear={currentDate.year}
+                  hasSecondFacility={hasSecondFacility}
+                  onAcquire={acquireExpansionTarget}
+                  onOpenFacility={openSecondFacility}
+                />
+              </>
+            )}
+            {centerTab === 'compliance' && (
+              <CompliancePanel
+                certs={complianceCerts}
+                currentYear={currentDate.year}
+                onStartAcquisition={startCertAcquisition}
+              />
+            )}
+            {centerTab === 'energy' && (
+              <EnergyPanel
+                energyState={energyState}
+                currentYear={currentDate.year}
+                onSetStrategy={setEnergyStrategy}
+                onInstallSolar={installSolar}
+                onInstallStorage={installStorage}
               />
             )}
           </div>

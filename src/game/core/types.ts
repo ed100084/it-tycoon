@@ -237,6 +237,10 @@ export interface GameConfig {
   customer?: CustomerConfig;
   vendor?: VendorConfig;
   board?: BoardConfig;
+  techDebt?: TechDebtConfig;
+  complianceCerts?: ComplianceCertsConfig;
+  expansion?: ExpansionConfig;
+  energy?: EnergyConfig;
 }
 
 // ─── Save / load ──────────────────────────────────────────────────────────────
@@ -728,6 +732,7 @@ export enum ShiftMode {
   DayOnly    = 'DAY_ONLY',
   TwoShift   = 'TWO_SHIFT',
   ThreeShift = 'THREE_SHIFT',
+  OnCall     = 'ON_CALL',
   AIOps      = 'AIOPS',
 }
 
@@ -1398,4 +1403,178 @@ export interface BoardConfig {
   kpiCustomerCountTarget: number;
   kpiSlaRateTarget: number;
   kpiGrossMarginTarget: number;
+}
+
+// ─── Tech Debt types ──────────────────────────────────────────────────────────
+
+export enum TechDebtLevel {
+  Healthy  = 'HEALTHY',
+  Warning  = 'WARNING',
+  Danger   = 'DANGER',
+  Critical = 'CRITICAL',
+}
+
+export interface TechDebtItem {
+  id: string;
+  source: string;
+  points: number;
+  addedAt: GameDate;
+  description: string;
+}
+
+export interface TechDebtConfig {
+  eolSoftwarePointsPerMonth: number;
+  skippedMaintenancePoints: number;
+  shortStaffedContractPoints: number;
+  eolHardwareOver2YrsPointsPerMonth: number;
+  emergencyWorkaroundPoints: number;
+  criticalCascadeFailureChance: number;
+  criticalThreshold: number;
+  dangerThreshold: number;
+  warningThreshold: number;
+  maxPoints: number;
+  refactorCostPerPoint: Money;
+}
+
+// ─── Compliance cert types ────────────────────────────────────────────────────
+
+export enum ComplianceCertType {
+  ISO_27001 = 'ISO_27001',
+  SOC2      = 'SOC2',
+  HIPAA     = 'HIPAA',
+  PCI_DSS   = 'PCI_DSS',
+  ISO_20000 = 'ISO_20000',
+  CSA_STAR  = 'CSA_STAR',
+}
+
+export enum ComplianceCertStatus {
+  NotAcquired = 'NOT_ACQUIRED',
+  InProgress  = 'IN_PROGRESS',
+  Active      = 'ACTIVE',
+  Renewal     = 'RENEWAL',
+  Expired     = 'EXPIRED',
+}
+
+export interface ComplianceCertRecord {
+  type: ComplianceCertType;
+  status: ComplianceCertStatus;
+  acquiredAt: GameDate | null;
+  expiresAt: GameDate | null;
+  progressMonths: number;
+  requiredMonths: number;
+  annualRenewalCost: Money;
+  isRenewalInProgress: boolean;
+}
+
+export interface ComplianceCertsDef {
+  acquisitionCostNTD: Money;
+  acquisitionMonths: number;
+  annualRenewalCostNTD: Money;
+  validityYears: number;
+  prerequisiteSecAnalysts: number;
+  renewalMonths: number;
+}
+
+export interface ComplianceCertsConfig {
+  certDefs: Record<ComplianceCertType, ComplianceCertsDef>;
+}
+
+// ─── Expansion types ──────────────────────────────────────────────────────────
+
+export enum AcquisitionStatus {
+  Available   = 'AVAILABLE',
+  Integrating = 'INTEGRATING',
+  Completed   = 'COMPLETED',
+  Declined    = 'DECLINED',
+}
+
+export interface AcquisitionTarget {
+  id: string;
+  name: string;
+  city: string;
+  annualRevenue: Money;
+  customerCount: number;
+  techDebtInherit: number;
+  acquisitionMultiplier: number;
+  status: AcquisitionStatus;
+  availableFromYear: number;
+}
+
+export interface ExpansionConfig {
+  acquisitionUnlockYear: number;
+  newFacilityUnlockYear: number;
+  integrationMonths: number;
+  integrationMoralePenalty: number;
+  integrationTechDebt: number;
+  drAbilityBonusFromSecondCity: number;
+  acquisitionTargets: AcquisitionTarget[];
+}
+
+// ─── Event chain types ────────────────────────────────────────────────────────
+
+export interface EventChainStep {
+  id: string;
+  name: string;
+  description: string;
+  resolutionWindowMonths: number;
+  consequence: string;
+  autoTriggerNextId: string | null;
+}
+
+export interface EventChain {
+  id: string;
+  name: string;
+  icon: string;
+  description: string;
+  triggerCondition: 'always' | 'tech_debt_high' | 'staff_low' | 'cert_expired' | 'energy_spike';
+  triggerYear?: number;
+  steps: EventChainStep[];
+}
+
+export interface ActiveEventChain {
+  chainId: string;
+  chainName: string;
+  chainIcon: string;
+  currentStepIndex: number;
+  stepStartDate: GameDate;
+  resolutionDeadline: GameDate;
+  isResolved: boolean;
+  isEscalated: boolean;
+}
+
+// ─── Energy types ─────────────────────────────────────────────────────────────
+
+export enum ElectricityStrategy {
+  Spot    = 'SPOT',
+  Fixed1Y = 'FIXED_1Y',
+  Fixed3Y = 'FIXED_3Y',
+}
+
+export interface EnergyState {
+  strategy: ElectricityStrategy;
+  hasSolar: boolean;
+  hasStorage: boolean;
+  esgScore: number;
+  carbonTaxActive: boolean;
+  monthlyElectricityCostMultiplier: number;
+  fixedContractExpiry: GameDate | null;
+  esgBonusTriggered: boolean;
+}
+
+export interface EnergyConfig {
+  solarUnlockYear: number;
+  solarInstallCost: Money;
+  solarMonthlyReduction: number;
+  storageUnlockYear: number;
+  storageInstallCost: Money;
+  storagePeakSavings: number;
+  carbonTaxStartYear: number;
+  carbonTaxMonthly: Money;
+  greenEsgDiscount: number;
+  spotVolatility: number;
+  fixed1YDiscount: number;
+  fixed3YDiscount: number;
+  fixed3YPrepayMonths: number;
+  esgRfpBonus: number;
+  esgThresholdForBonus: number;
 }

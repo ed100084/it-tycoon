@@ -1,6 +1,7 @@
 import {
   CreditRating, FacilityRegion, CoolingLevel, ClimateRisk,
-  StaffRole, IncidentType, IncidentSeverity,
+  StaffRole, IncidentType, IncidentSeverity, AcquisitionStatus,
+  ComplianceCertType,
 } from '../core/types';
 import type { GameConfig } from '../core/types';
 
@@ -274,5 +275,62 @@ export const DEFAULT_CONFIG: Readonly<GameConfig> = Object.freeze({
     kpiCustomerCountTarget: 5,
     kpiSlaRateTarget: 95,
     kpiGrossMarginTarget: 20,
+  },
+
+  techDebt: {
+    eolSoftwarePointsPerMonth: 5,
+    skippedMaintenancePoints: 3,
+    shortStaffedContractPoints: 2,
+    eolHardwareOver2YrsPointsPerMonth: 4,
+    emergencyWorkaroundPoints: 1,
+    criticalCascadeFailureChance: 0.20,
+    criticalThreshold: 81,
+    dangerThreshold: 61,
+    warningThreshold: 31,
+    maxPoints: 100,
+    refactorCostPerPoint: 50_000,
+  },
+
+  complianceCerts: {
+    certDefs: {
+      [ComplianceCertType.ISO_27001]: { acquisitionCostNTD: 2_000_000, acquisitionMonths: 12, annualRenewalCostNTD: 500_000, validityYears: 3, prerequisiteSecAnalysts: 2, renewalMonths: 3 },
+      [ComplianceCertType.SOC2]:      { acquisitionCostNTD: 1_500_000, acquisitionMonths: 9,  annualRenewalCostNTD: 400_000, validityYears: 2, prerequisiteSecAnalysts: 1, renewalMonths: 2 },
+      [ComplianceCertType.HIPAA]:     { acquisitionCostNTD: 800_000,   acquisitionMonths: 6,  annualRenewalCostNTD: 200_000, validityYears: 3, prerequisiteSecAnalysts: 1, renewalMonths: 2 },
+      [ComplianceCertType.PCI_DSS]:   { acquisitionCostNTD: 1_200_000, acquisitionMonths: 8,  annualRenewalCostNTD: 300_000, validityYears: 2, prerequisiteSecAnalysts: 1, renewalMonths: 2 },
+      [ComplianceCertType.ISO_20000]: { acquisitionCostNTD: 1_000_000, acquisitionMonths: 10, annualRenewalCostNTD: 250_000, validityYears: 3, prerequisiteSecAnalysts: 1, renewalMonths: 2 },
+      [ComplianceCertType.CSA_STAR]:  { acquisitionCostNTD: 600_000,   acquisitionMonths: 5,  annualRenewalCostNTD: 150_000, validityYears: 2, prerequisiteSecAnalysts: 1, renewalMonths: 1 },
+    },
+  },
+
+  expansion: {
+    acquisitionUnlockYear: 2008,
+    newFacilityUnlockYear: 2010,
+    integrationMonths: 6,
+    integrationMoralePenalty: -15,
+    integrationTechDebt: 30,
+    drAbilityBonusFromSecondCity: 50,
+    acquisitionTargets: [
+      { id: 'acq_01', name: '台中資科', city: '台中', annualRevenue: 12_000_000, customerCount: 4, techDebtInherit: 25, acquisitionMultiplier: 2.5, status: AcquisitionStatus.Available, availableFromYear: 2008 },
+      { id: 'acq_02', name: '南部IDC',  city: '台南', annualRevenue: 20_000_000, customerCount: 5, techDebtInherit: 35, acquisitionMultiplier: 3.0, status: AcquisitionStatus.Available, availableFromYear: 2010 },
+      { id: 'acq_03', name: '雲端新創', city: '台北', annualRevenue: 30_000_000, customerCount: 3, techDebtInherit: 40, acquisitionMultiplier: 3.5, status: AcquisitionStatus.Available, availableFromYear: 2015 },
+    ],
+  },
+
+  energy: {
+    solarUnlockYear: 2015,
+    solarInstallCost: 5_000_000,
+    solarMonthlyReduction: 0.12,
+    storageUnlockYear: 2018,
+    storageInstallCost: 3_000_000,
+    storagePeakSavings: 0.08,
+    carbonTaxStartYear: 2020,
+    carbonTaxMonthly: 100_000,
+    greenEsgDiscount: 0.30,
+    spotVolatility: 0.20,
+    fixed1YDiscount: 0.05,
+    fixed3YDiscount: 0.15,
+    fixed3YPrepayMonths: 3,
+    esgRfpBonus: 0.20,
+    esgThresholdForBonus: 70,
   },
 });

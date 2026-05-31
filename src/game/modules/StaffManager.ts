@@ -255,6 +255,36 @@ export class StaffManager implements IGameModule {
 
   getShiftMode(): ShiftMode { return this.state.shiftMode; }
 
+  /** On-call monthly allowance = headcount × NT$5,000 */
+  getOnCallAllowance(): number {
+    const activeCount = this.state.staff.filter(
+      s => s.status === StaffStatus.Active || s.status === StaffStatus.Assigned,
+    ).length;
+    return activeCount * 5_000;
+  }
+
+  /** Night-time SLA response multiplier by shift mode */
+  getNightResponseMultiplier(): number {
+    switch (this.state.shiftMode) {
+      case ShiftMode.DayOnly:    return 3.0;
+      case ShiftMode.TwoShift:   return 1.3;
+      case ShiftMode.ThreeShift: return 1.0;
+      case ShiftMode.OnCall:     return 1.5;
+      case ShiftMode.AIOps:      return 1.0;
+    }
+  }
+
+  /** Staff headcount multiplier required for the shift mode */
+  getStaffingMultiplier(): number {
+    switch (this.state.shiftMode) {
+      case ShiftMode.DayOnly:    return 1.0;
+      case ShiftMode.TwoShift:   return 1.8;
+      case ShiftMode.ThreeShift: return 2.5;
+      case ShiftMode.OnCall:     return 1.2;
+      case ShiftMode.AIOps:      return 1.1;
+    }
+  }
+
   calculateMonthlyPayroll(): Money {
     return this.state.staff.reduce((sum, s) => {
       if (s.status === StaffStatus.InRecruitment) return sum;
@@ -494,6 +524,29 @@ export class StaffManager implements IGameModule {
       source: this.moduleId,
       gameDate: this.currentDate,
     });
+
+    // On-call allowance + morale penalty
+    if (this.state.shiftMode === ShiftMode.OnCall) {
+      const allowance = this.getOnCallAllowance();
+      if (allowance > 0) {
+        this.bus.publish({
+          type: 'finance.expense_requested',
+          payload: {
+            date: this.currentDate,
+            category: 'STAFF_SALARY',
+            amount: allowance,
+            isCashExpense: true,
+            description: 'On-Call 值班津貼',
+          },
+          source: this.moduleId,
+          gameDate: this.currentDate,
+        });
+      }
+      // Morale penalty for on-call stress
+      for (const member of this.state.staff.filter(s => s.status !== StaffStatus.InRecruitment)) {
+        member.morale = Math.max(0, (member.morale ?? 80) - 5);
+      }
+    }
 
     // Certification completion
     this.advanceCertifications();

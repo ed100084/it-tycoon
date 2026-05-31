@@ -20,6 +20,10 @@ import { CustomerEngine } from './game/modules/CustomerEngine';
 import { VendorEngine } from './game/modules/VendorEngine';
 import { BoardEngine } from './game/modules/BoardEngine';
 import { StrategyEngine } from './game/modules/StrategyEngine';
+import { TechDebtEngine } from './game/modules/TechDebtEngine';
+import { ComplianceEngine } from './game/modules/ComplianceEngine';
+import { ExpansionEngine } from './game/modules/ExpansionEngine';
+import { EnergyEngine } from './game/modules/EnergyEngine';
 import { DEFAULT_CONFIG } from './game/config/default.config';
 import { useUIStore } from './store/uiStore';
 
@@ -45,7 +49,11 @@ engine
   .register(new CustomerEngine())
   .register(new VendorEngine())
   .register(new BoardEngine())
-  .register(new StrategyEngine());
+  .register(new StrategyEngine())
+  .register(new TechDebtEngine())
+  .register(new ComplianceEngine())
+  .register(new ExpansionEngine())
+  .register(new EnergyEngine());
 
 const App: React.FC = () => {
   const [phase, setPhase] = useState<Phase>('boot');

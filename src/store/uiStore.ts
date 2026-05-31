@@ -42,6 +42,8 @@ import type {
   StaffMember, JobOpening, ShiftMode, Incident, TechNode, HistoricalEvent,
   GlobalModifier, EconomicCycleState, EventDecision,
   Achievement, Competitor, ActiveRandomEvent, RegionMaintenanceState,
+  TechDebtItem, TechDebtLevel, ComplianceCertRecord, ComplianceCertType,
+  AcquisitionTarget, EnergyState, ElectricityStrategy, ActiveEventChain,
 } from '../game/core/types';
 import type { AchievementEngine } from '../game/modules/AchievementEngine';
 import type { CompetitorEngine } from '../game/modules/CompetitorEngine';
@@ -49,6 +51,10 @@ import type { StrategyEngine } from '../game/modules/StrategyEngine';
 import type { CustomerEngine } from '../game/modules/CustomerEngine';
 import type { VendorEngine } from '../game/modules/VendorEngine';
 import type { BoardEngine } from '../game/modules/BoardEngine';
+import type { TechDebtEngine } from '../game/modules/TechDebtEngine';
+import type { ComplianceEngine } from '../game/modules/ComplianceEngine';
+import type { ExpansionEngine } from '../game/modules/ExpansionEngine';
+import type { EnergyEngine } from '../game/modules/EnergyEngine';
 import type {
   NamedCustomer, VendorRelationship, KPITarget, BoardYearResult,
   StrategyScores, CertificationType, DRDrill,
@@ -146,6 +152,25 @@ export interface UIState {
   // DR Drills
   drDrills: DRDrill[];
 
+  // Tech Debt
+  techDebtPoints: number;
+  techDebtLevel: TechDebtLevel;
+  techDebtItems: TechDebtItem[];
+
+  // Compliance
+  complianceCerts: ComplianceCertRecord[];
+  expiredCertCount: number;
+
+  // Expansion
+  expansionTargets: AcquisitionTarget[];
+  hasSecondFacility: boolean;
+
+  // Energy
+  energyState: EnergyState | null;
+
+  // Event chains
+  activeEventChains: ActiveEventChain[];
+
   // Engine ref (not reactive, just for actions)
   _engine: GameEngine | null;
 
@@ -176,6 +201,15 @@ export interface UIState {
   setMentor: (juniorId: string, mentorId: string | null) => void;
   startDRDrill: (costNTD: number) => void;
   acknowledgeBoard: () => void;
+  startRefactoring: (points: number) => void;
+  startCertAcquisition: (type: ComplianceCertType) => void;
+  acquireExpansionTarget: (targetId: string) => void;
+  openSecondFacility: () => void;
+  setEnergyStrategy: (strategy: ElectricityStrategy) => void;
+  installSolar: () => void;
+  installStorage: () => void;
+  resolveEventChain: (chainId: string) => void;
+  setOnCallMode: (mode: ShiftMode) => void;
   scheduleMaintenance: (region: FacilityRegion, offPeak: boolean) => void;
   performGeneratorMaintenance: (region: FacilityRegion) => void;
   nextTutorialStep: () => void;
@@ -239,6 +273,16 @@ export const useUIStore = create<UIState>((set, get) => ({
   boardGameOver: false,
   boardPendingReview: false,
   drDrills: [],
+
+  techDebtPoints: 0,
+  techDebtLevel: 'HEALTHY' as TechDebtLevel,
+  techDebtItems: [],
+  complianceCerts: [],
+  expiredCertCount: 0,
+  expansionTargets: [],
+  hasSecondFacility: false,
+  energyState: null,
+  activeEventChains: [],
 
   _engine: null,
 
@@ -440,6 +484,80 @@ export const useUIStore = create<UIState>((set, get) => ({
     set({ boardPendingReview: false });
   },
 
+  startRefactoring(points) {
+    const engine = get()._engine;
+    if (!engine) return;
+    const tde = engine.getModule<TechDebtEngine>('TechDebtEngine');
+    tde.startRefactoring(points);
+    set({ techDebtPoints: tde.getTotalPoints(), techDebtLevel: tde.getLevel(), techDebtItems: tde.getItems() });
+  },
+
+  startCertAcquisition(type) {
+    const engine = get()._engine;
+    if (!engine) return;
+    const ce = engine.getModule<ComplianceEngine>('ComplianceEngine');
+    ce.startAcquisition(type);
+    set({ complianceCerts: ce.getCertifications(), expiredCertCount: ce.getExpiredCerts().length });
+  },
+
+  acquireExpansionTarget(targetId) {
+    const engine = get()._engine;
+    if (!engine) return;
+    const ee = engine.getModule<ExpansionEngine>('ExpansionEngine');
+    ee.acquireTarget(targetId);
+    set({ expansionTargets: ee.getAcquisitions(), hasSecondFacility: ee.hasSecondFacility() });
+  },
+
+  openSecondFacility() {
+    const engine = get()._engine;
+    if (!engine) return;
+    const ee = engine.getModule<ExpansionEngine>('ExpansionEngine');
+    ee.openSecondFacility();
+    set({ hasSecondFacility: ee.hasSecondFacility() });
+  },
+
+  setEnergyStrategy(strategy) {
+    const engine = get()._engine;
+    if (!engine) return;
+    const en = engine.getModule<EnergyEngine>('EnergyEngine');
+    en.setStrategy(strategy);
+    set({ energyState: en.getEnergyState() });
+  },
+
+  installSolar() {
+    const engine = get()._engine;
+    if (!engine) return;
+    const en = engine.getModule<EnergyEngine>('EnergyEngine');
+    const time = engine.getModule<TimeEngine>('TimeEngine');
+    en.installSolar(time.getCurrentDate().year);
+    set({ energyState: en.getEnergyState() });
+  },
+
+  installStorage() {
+    const engine = get()._engine;
+    if (!engine) return;
+    const en = engine.getModule<EnergyEngine>('EnergyEngine');
+    const time = engine.getModule<TimeEngine>('TimeEngine');
+    en.installStorage(time.getCurrentDate().year);
+    set({ energyState: en.getEnergyState() });
+  },
+
+  resolveEventChain(chainId) {
+    const engine = get()._engine;
+    if (!engine) return;
+    const et = engine.getModule<EventTimeline>('EventTimeline');
+    et.resolveChainStep(chainId);
+    set({ activeEventChains: et.getActiveChains() });
+  },
+
+  setOnCallMode(mode) {
+    const engine = get()._engine;
+    if (!engine) return;
+    const sm = engine.getModule<StaffManager>('StaffManager');
+    sm.setShiftMode(mode);
+    set({ shiftMode: sm.getShiftMode() });
+  },
+
   scheduleMaintenance(region, offPeak) {
     const engine = get()._engine;
     if (!engine) return;
@@ -548,6 +666,23 @@ export const useUIStore = create<UIState>((set, get) => ({
       set({ tutorialStep: tutorial.getCurrentStep() });
     }, 800);
 
+    const tde = engine.getModule<TechDebtEngine>('TechDebtEngine');
+    const compEng = engine.getModule<ComplianceEngine>('ComplianceEngine');
+    const expan = engine.getModule<ExpansionEngine>('ExpansionEngine');
+    const en = engine.getModule<EnergyEngine>('EnergyEngine');
+
+    set({
+      techDebtPoints: tde.getTotalPoints(),
+      techDebtLevel: tde.getLevel(),
+      techDebtItems: tde.getItems(),
+      complianceCerts: compEng.getCertifications(),
+      expiredCertCount: compEng.getExpiredCerts().length,
+      expansionTargets: expan.getAcquisitions(),
+      hasSecondFacility: expan.hasSecondFacility(),
+      energyState: en.getEnergyState(),
+      activeEventChains: et.getActiveChains(),
+    });
+
     const bus = engine.bus;
 
     bus.subscribe('time.month_end', () => {
@@ -594,7 +729,64 @@ export const useUIStore = create<UIState>((set, get) => ({
         boardGameOver: board.isGameOver(),
         boardPendingReview: board.isPendingReview(),
         drDrills: sec.getDRDrills(),
+        techDebtPoints: tde.getTotalPoints(),
+        techDebtLevel: tde.getLevel(),
+        techDebtItems: tde.getItems(),
+        complianceCerts: compEng.getCertifications(),
+        expiredCertCount: compEng.getExpiredCerts().length,
+        expansionTargets: expan.getAcquisitions(),
+        hasSecondFacility: expan.hasSecondFacility(),
+        energyState: en.getEnergyState(),
+        activeEventChains: et.getActiveChains(),
       });
+    });
+
+    bus.subscribe('techdebt.updated', () => {
+      set({ techDebtPoints: tde.getTotalPoints(), techDebtLevel: tde.getLevel(), techDebtItems: tde.getItems() });
+    });
+
+    bus.subscribe('compliance.updated', () => {
+      set({ complianceCerts: compEng.getCertifications(), expiredCertCount: compEng.getExpiredCerts().length });
+    });
+
+    bus.subscribe('compliance.cert_acquired', () => {
+      set({ complianceCerts: compEng.getCertifications(), expiredCertCount: compEng.getExpiredCerts().length });
+    });
+
+    bus.subscribe('compliance.cert_expired', () => {
+      set({ complianceCerts: compEng.getCertifications(), expiredCertCount: compEng.getExpiredCerts().length });
+    });
+
+    bus.subscribe('expansion.acquisition_started', () => {
+      set({ expansionTargets: expan.getAcquisitions() });
+    });
+
+    bus.subscribe('expansion.integration_completed', () => {
+      set({ expansionTargets: expan.getAcquisitions() });
+    });
+
+    bus.subscribe('expansion.second_facility_opened', () => {
+      set({ hasSecondFacility: true });
+    });
+
+    bus.subscribe('energy.updated', () => {
+      set({ energyState: en.getEnergyState() });
+    });
+
+    bus.subscribe('timeline.chain_triggered', () => {
+      set({ activeEventChains: et.getActiveChains() });
+    });
+
+    bus.subscribe('timeline.chain_step_resolved', () => {
+      set({ activeEventChains: et.getActiveChains() });
+    });
+
+    bus.subscribe('timeline.chain_escalated', () => {
+      set({ activeEventChains: et.getActiveChains() });
+    });
+
+    bus.subscribe('timeline.chain_completed', () => {
+      set({ activeEventChains: et.getActiveChains() });
     });
 
     bus.subscribe('achievement.unlocked', () => {
