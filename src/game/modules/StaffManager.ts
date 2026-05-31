@@ -1,10 +1,19 @@
 import type {
   EntityId, GameConfig, GameDate, IEventBus, IGameModule, Money,
   StaffMember, StaffConfig, StaffRoleConfig, JobOpening, LayoffResult,
-  IncidentHandlingCapacity,
+  IncidentHandlingCapacity, CertificationType, CertificationInProgress,
+  StaffCertification,
 } from '../core/types';
 import { StaffRole, StaffStatus, ShiftMode } from '../core/types';
 import { addMonths } from '../../utils/gameDate';
+
+export const CERTIFICATION_DEFS: Record<CertificationType, { name: string; costNTD: Money; durationMonths: number; effectDescription: string }> = {
+  CCNA:    { name: 'CCNA',    costNTD: 30_000,  durationMonths: 2, effectDescription: '網路維護效率 +20%' },
+  AWS_SAA: { name: 'AWS SAA', costNTD: 50_000,  durationMonths: 3, effectDescription: '雲端服務品質 +15%' },
+  CISSP:   { name: 'CISSP',   costNTD: 80_000,  durationMonths: 4, effectDescription: '資安防禦 +25%' },
+  ITIL:    { name: 'ITIL',    costNTD: 40_000,  durationMonths: 2, effectDescription: 'SLA 達成率 +10%' },
+  PMP:     { name: 'PMP',     costNTD: 60_000,  durationMonths: 3, effectDescription: '合約管理效率 +15%' },
+};
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -73,6 +82,7 @@ interface StaffManagerState {
   recruitmentCostMod: number;
   resignationRateMod: number;
   techTreeBonuses: StaffTechBonus;
+  certificationsInProgress: CertificationInProgress[];
 }
 
 // ─── Module ───────────────────────────────────────────────────────────────────
@@ -94,6 +104,7 @@ export class StaffManager implements IGameModule {
     talentWarActive: false,
     recruitmentCostMod: 1.0,
     resignationRateMod: 1.0,
+    certificationsInProgress: [],
     techTreeBonuses: {
       aiopsEnabled: false,
       trainingProgramEnabled: false,
@@ -186,6 +197,10 @@ export class StaffManager implements IGameModule {
       assignedRegion: null,
       trainingCompletionDate: addMonths(this.currentDate, 1),
       satisfactionScore: 80,
+      morale: 80,
+      certifications: [],
+      mentorId: null,
+      skillLevel: roleLevelFromRole(opening.role),
     };
     this.state.staff.push(member);
     this.recalcCoverage();
@@ -245,6 +260,63 @@ export class StaffManager implements IGameModule {
       if (s.status === StaffStatus.InRecruitment) return sum;
       return sum + Math.round(s.monthlySalaryNTD * this.cfg.benefitMultiplier);
     }, 0);
+  }
+
+  // ── Certification system ─────────────────────────────────────────────────
+
+  getCertificationsInProgress(): CertificationInProgress[] {
+    return [...this.state.certificationsInProgress];
+  }
+
+  sendForCertification(staffId: EntityId, type: CertificationType): boolean {
+    const member = this.state.staff.find(s => s.id === staffId);
+    if (!member) return false;
+    if (member.certifications.some(c => c.type === type)) return false;
+    if (this.state.certificationsInProgress.some(c => c.staffId === staffId)) return false;
+    const def = CERTIFICATION_DEFS[type];
+    const entry: CertificationInProgress = {
+      staffId,
+      type,
+      startedAt: { ...this.currentDate },
+      completesAt: addMonths(this.currentDate, def.durationMonths),
+      costNTD: def.costNTD,
+    };
+    this.state.certificationsInProgress.push(entry);
+    this.bus.publish({
+      type: 'staff.certification_started',
+      payload: { staffId, name: member.name, certType: type, cost: def.costNTD },
+      source: this.moduleId,
+      gameDate: this.currentDate,
+    });
+    return true;
+  }
+
+  // ── Morale system ────────────────────────────────────────────────────────
+
+  payBonus(): void {
+    const totalPayroll = this.calculateMonthlyPayroll();
+    for (const member of this.state.staff.filter(s => s.status !== StaffStatus.InRecruitment)) {
+      member.morale = Math.min(100, (member.morale ?? 80) + 15);
+    }
+    this.bus.publish({
+      type: 'staff.bonus_paid',
+      payload: { totalCost: totalPayroll, moraleBonus: 15 },
+      source: this.moduleId,
+      gameDate: this.currentDate,
+    });
+  }
+
+  // ── Mentor system ────────────────────────────────────────────────────────
+
+  setMentor(juniorId: EntityId, mentorId: EntityId | null): boolean {
+    const junior = this.state.staff.find(s => s.id === juniorId);
+    if (!junior) return false;
+    if (mentorId) {
+      const mentor = this.state.staff.find(s => s.id === mentorId);
+      if (!mentor || mentor.level < 3) return false;
+    }
+    junior.mentorId = mentorId;
+    return true;
   }
 
   getAvailableEngineers(): StaffMember[] {
@@ -331,6 +403,7 @@ export class StaffManager implements IGameModule {
       recruitmentCostMod: this.state.recruitmentCostMod,
       resignationRateMod: this.state.resignationRateMod,
       techTreeBonuses: this.state.techTreeBonuses,
+      certificationsInProgress: this.state.certificationsInProgress,
       currentDate: this.currentDate,
     };
   }
@@ -345,11 +418,19 @@ export class StaffManager implements IGameModule {
     this.state.talentWarActive = (saved.talentWarActive as boolean) ?? false;
     this.state.recruitmentCostMod = (saved.recruitmentCostMod as number) ?? 1.0;
     this.state.resignationRateMod = (saved.resignationRateMod as number) ?? 1.0;
+    this.state.certificationsInProgress = (saved.certificationsInProgress as CertificationInProgress[]) ?? [];
     if (saved.techTreeBonuses) {
       Object.assign(this.state.techTreeBonuses, saved.techTreeBonuses);
     }
     if (saved.currentDate) {
       this.currentDate = saved.currentDate as GameDate;
+    }
+    // Back-fill new fields for saves that pre-date v3.1
+    for (const s of this.state.staff) {
+      if (s.morale === undefined) s.morale = 80;
+      if (!s.certifications) s.certifications = [];
+      if (s.mentorId === undefined) s.mentorId = null;
+      if (s.skillLevel === undefined) s.skillLevel = s.level;
     }
   }
 
@@ -414,11 +495,68 @@ export class StaffManager implements IGameModule {
       gameDate: this.currentDate,
     });
 
+    // Certification completion
+    this.advanceCertifications();
+
+    // Morale drift
+    this.updateMorale();
+
+    // Mentor skill growth
+    this.applyMentorGrowth();
+
     // Resignation roll
     this.performResignationRoll();
 
     // Coverage update
     this.recalcCoverage();
+  }
+
+  private advanceCertifications(): void {
+    const completed: CertificationInProgress[] = [];
+    for (const cert of this.state.certificationsInProgress) {
+      const d = cert.completesAt;
+      if (
+        this.currentDate.year > d.year ||
+        (this.currentDate.year === d.year && this.currentDate.month >= d.month)
+      ) {
+        completed.push(cert);
+      }
+    }
+    for (const cert of completed) {
+      this.state.certificationsInProgress = this.state.certificationsInProgress.filter(c => c !== cert);
+      const member = this.state.staff.find(s => s.id === cert.staffId);
+      if (member && !member.certifications.some(c => c.type === cert.type)) {
+        const earned: StaffCertification = { type: cert.type, earnedAt: { ...this.currentDate } };
+        member.certifications.push(earned);
+        member.morale = Math.min(100, (member.morale ?? 80) + 10);
+        this.bus.publish({
+          type: 'staff.certification_completed',
+          payload: { staffId: cert.staffId, name: member.name, certType: cert.type },
+          source: this.moduleId,
+          gameDate: this.currentDate,
+        });
+      }
+    }
+  }
+
+  private updateMorale(): void {
+    for (const member of this.state.staff.filter(s => s.status !== StaffStatus.InRecruitment)) {
+      const morale = member.morale ?? 80;
+      // Natural drift toward 70
+      const target = 70;
+      const delta = (target - morale) * 0.05;
+      member.morale = Math.max(0, Math.min(100, morale + delta));
+    }
+  }
+
+  private applyMentorGrowth(): void {
+    for (const member of this.state.staff) {
+      if (!member.mentorId) continue;
+      const mentor = this.state.staff.find(s => s.id === member.mentorId);
+      if (!mentor || mentor.level < 3) { member.mentorId = null; continue; }
+      // Mentored staff gain skill faster — raise qualityScore slightly
+      member.qualityScore = Math.min(1.5, member.qualityScore + 0.002);
+    }
   }
 
   private performResignationRoll(): void {
@@ -430,6 +568,10 @@ export class StaffManager implements IGameModule {
         * (this.state.techTreeBonuses.resignationRateReduction > 0
           ? (1 - this.state.techTreeBonuses.resignationRateReduction)
           : 1);
+      // Morale effects
+      const morale = member.morale ?? 80;
+      if (morale < 30) rate *= 3;
+      else if (morale > 80) rate *= 0.5;
       // Talent war
       if (this.state.talentWarActive) rate *= 3;
       if (seededRand() < rate) {

@@ -239,4 +239,40 @@ export const DEFAULT_CONFIG: Readonly<GameConfig> = Object.freeze({
     renewalBonusAtHighSatisfaction: 0.40,
     priceIncreaseRange: [0.05, 0.15] as [number, number],
   },
+
+  strategy: {
+    establishThreshold: 0.60,
+    reputationBonusOnEstablish: 5,
+    rfpBoostOnRoute: 0.30,
+  },
+
+  customer: {
+    referralCheckMonths: 3,
+    xlChurnReputationPenalty: 8,
+    sChurnReputationPenalty: 2,
+    surveyMonth: 12,
+    loyaltyRenewalBonus: 0.15,
+  },
+
+  vendor: {
+    purchasePerPoint: 1_000_000,
+    silverThreshold: 30,
+    goldThreshold: 60,
+    platinumThreshold: 85,
+    goldDiscount: 0.10,
+    platinumDiscount: 0.15,
+    concentrationRiskThreshold: 0.60,
+    deliverySpeedupMonths: 1,
+  },
+
+  board: {
+    bonusMonthsOfRevenue: 1,
+    partialBonusMonthsOfRevenue: 0.25,
+    warningThreshold: 0.50,
+    gameOverConsecutiveFailYears: 2,
+    kpiRevenueGrowthTarget: 0.15,
+    kpiCustomerCountTarget: 5,
+    kpiSlaRateTarget: 95,
+    kpiGrossMarginTarget: 20,
+  },
 });

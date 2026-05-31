@@ -233,6 +233,10 @@ export interface GameConfig {
   eventTimeline?: EventTimelineConfig;
   techTree?: TechTreeConfig;
   reputation?: ReputationConfig;
+  strategy?: StrategyConfig;
+  customer?: CustomerConfig;
+  vendor?: VendorConfig;
+  board?: BoardConfig;
 }
 
 // ─── Save / load ──────────────────────────────────────────────────────────────
@@ -746,6 +750,11 @@ export interface StaffMember {
   assignedRegion: FacilityRegion | null;
   trainingCompletionDate: GameDate | null;
   satisfactionScore: number;
+  // Talent growth system (added v3.1)
+  morale: number;            // 0–100
+  certifications: StaffCertification[];
+  mentorId: EntityId | null;
+  skillLevel: 1 | 2 | 3 | 4 | 5;
 }
 
 export interface JobOpening {
@@ -1232,4 +1241,161 @@ export interface ActiveRandomEvent {
   expiresAt: GameDate;
   isExpired: boolean;
   decidedOptionIndex: number | null;
+}
+
+// ─── Strategy types ───────────────────────────────────────────────────────────
+
+export type StrategyRoute = 'GOVERNMENT' | 'STARTUP' | 'ENTERPRISE';
+
+export interface StrategyScores {
+  government: number;
+  startup: number;
+  enterprise: number;
+}
+
+export interface StrategyConfig {
+  establishThreshold: number;
+  reputationBonusOnEstablish: number;
+  rfpBoostOnRoute: number;
+}
+
+// ─── Customer types ───────────────────────────────────────────────────────────
+
+export type CustomerIndustry = 'healthcare' | 'finance' | 'tech' | 'government' | 'ecommerce' | 'manufacturing';
+export type CustomerSize = 'S' | 'M' | 'L' | 'XL';
+export type CustomerLifecycleStatus = 'active' | 'churned';
+
+export interface NamedCustomer {
+  id: EntityId;
+  name: string;
+  industry: CustomerIndustry;
+  size: CustomerSize;
+  loyaltyScore: number;
+  monthsAsCustomer: number;
+  referralChance: number;
+  status: CustomerLifecycleStatus;
+  contractIds: EntityId[];
+  totalRevenue: Money;
+  lastSurveyScore: number | null;
+  acquisitionDate: GameDate;
+}
+
+export interface CustomerConfig {
+  referralCheckMonths: number;
+  xlChurnReputationPenalty: number;
+  sChurnReputationPenalty: number;
+  surveyMonth: number;
+  loyaltyRenewalBonus: number;
+}
+
+// ─── Vendor types ─────────────────────────────────────────────────────────────
+
+export type VendorId = 'DELL' | 'HPE' | 'CISCO' | 'FORTINET' | 'MICROSOFT' | 'VMWARE';
+export type VendorLevel = 'Bronze' | 'Silver' | 'Gold' | 'Platinum';
+
+export interface VendorRelationship {
+  vendorId: VendorId;
+  name: string;
+  relationshipLevel: number;
+  discountRate: number;
+  priorityDelivery: boolean;
+  totalPurchases: Money;
+  level: VendorLevel;
+}
+
+export interface VendorConfig {
+  purchasePerPoint: Money;
+  goldThreshold: number;
+  platinumThreshold: number;
+  silverThreshold: number;
+  goldDiscount: number;
+  platinumDiscount: number;
+  concentrationRiskThreshold: number;
+  deliverySpeedupMonths: number;
+}
+
+// ─── Staff certification types ────────────────────────────────────────────────
+
+export type CertificationType = 'CCNA' | 'AWS_SAA' | 'CISSP' | 'ITIL' | 'PMP';
+
+export interface CertificationDef {
+  type: CertificationType;
+  name: string;
+  costNTD: Money;
+  durationMonths: number;
+  effectDescription: string;
+  effectKey: string;
+  effectValue: number;
+}
+
+export interface StaffCertification {
+  type: CertificationType;
+  earnedAt: GameDate;
+}
+
+export interface CertificationInProgress {
+  staffId: EntityId;
+  type: CertificationType;
+  startedAt: GameDate;
+  completesAt: GameDate;
+  costNTD: Money;
+}
+
+// ─── DR Drill / Audit types ───────────────────────────────────────────────────
+
+export interface DRDrill {
+  id: EntityId;
+  startedAt: GameDate;
+  completesAt: GameDate;
+  costNTD: Money;
+  status: 'in_progress' | 'passed' | 'failed';
+  successChance: number;
+  yearOfDrill: number;
+}
+
+export interface AuditCheckItem {
+  name: string;
+  passed: boolean;
+  points: number;
+}
+
+export interface SecurityAuditRecord {
+  id: EntityId;
+  year: number;
+  triggeredAt: GameDate;
+  status: 'in_progress' | 'passed' | 'failed';
+  score: number;
+  checklist: AuditCheckItem[];
+}
+
+// ─── Board / KPI types ────────────────────────────────────────────────────────
+
+export type KPIType = 'revenue_growth' | 'customer_count' | 'sla_rate' | 'gross_margin';
+
+export interface KPITarget {
+  id: string;
+  type: KPIType;
+  description: string;
+  targetValue: number;
+  currentValue: number;
+  isAchieved: boolean;
+}
+
+export interface BoardYearResult {
+  year: number;
+  achievedCount: number;
+  totalCount: number;
+  bonus: Money;
+  hadWarning: boolean;
+}
+
+export interface BoardConfig {
+  bonusMonthsOfRevenue: number;
+  partialBonusMonthsOfRevenue: number;
+  warningThreshold: number;
+  gameOverConsecutiveFailYears: number;
+  kpiRevenueGrowthTarget: number;
+  kpiCustomerCountTarget: number;
+  kpiSlaRateTarget: number;
+  kpiGrossMarginTarget: number;
 }

@@ -45,6 +45,14 @@ import type {
 } from '../game/core/types';
 import type { AchievementEngine } from '../game/modules/AchievementEngine';
 import type { CompetitorEngine } from '../game/modules/CompetitorEngine';
+import type { StrategyEngine } from '../game/modules/StrategyEngine';
+import type { CustomerEngine } from '../game/modules/CustomerEngine';
+import type { VendorEngine } from '../game/modules/VendorEngine';
+import type { BoardEngine } from '../game/modules/BoardEngine';
+import type {
+  NamedCustomer, VendorRelationship, KPITarget, BoardYearResult,
+  StrategyScores, CertificationType, DRDrill,
+} from '../game/core/types';
 
 export interface UIState {
   // Time
@@ -118,6 +126,26 @@ export interface UIState {
   // Maintenance
   maintenanceStates: Record<FacilityRegion, RegionMaintenanceState> | null;
 
+  // Strategy
+  strategyScores: StrategyScores;
+  strategyDominantRoute: string | null;
+  strategyEstablishedRoutes: string[];
+
+  // Customers
+  namedCustomers: NamedCustomer[];
+
+  // Vendors
+  vendors: VendorRelationship[];
+
+  // Board / KPI
+  boardKPIs: KPITarget[];
+  boardYearResults: BoardYearResult[];
+  boardGameOver: boolean;
+  boardPendingReview: boolean;
+
+  // DR Drills
+  drDrills: DRDrill[];
+
   // Engine ref (not reactive, just for actions)
   _engine: GameEngine | null;
 
@@ -143,6 +171,11 @@ export interface UIState {
   cancelTechResearch: (nodeId: string) => void;
   makeTimelineDecision: (decisionId: string, optionIndex: number) => void;
   resolveRandomEvent: (instanceId: string, optionIndex: number) => void;
+  sendForCertification: (staffId: string, type: CertificationType) => void;
+  payStaffBonus: () => void;
+  setMentor: (juniorId: string, mentorId: string | null) => void;
+  startDRDrill: (costNTD: number) => void;
+  acknowledgeBoard: () => void;
   scheduleMaintenance: (region: FacilityRegion, offPeak: boolean) => void;
   performGeneratorMaintenance: (region: FacilityRegion) => void;
   nextTutorialStep: () => void;
@@ -195,6 +228,17 @@ export const useUIStore = create<UIState>((set, get) => ({
   playerMarketShare: 0.40,
   activeRandomEvents: [],
   maintenanceStates: null,
+
+  strategyScores: { government: 0, startup: 0, enterprise: 0 },
+  strategyDominantRoute: null,
+  strategyEstablishedRoutes: [],
+  namedCustomers: [],
+  vendors: [],
+  boardKPIs: [],
+  boardYearResults: [],
+  boardGameOver: false,
+  boardPendingReview: false,
+  drDrills: [],
 
   _engine: null,
 
@@ -356,6 +400,46 @@ export const useUIStore = create<UIState>((set, get) => ({
     set({ activeRandomEvents: et.getActiveRandomEvents() });
   },
 
+  sendForCertification(staffId, type) {
+    const engine = get()._engine;
+    if (!engine) return;
+    const sm = engine.getModule<import('../game/modules/StaffManager').StaffManager>('StaffManager');
+    sm.sendForCertification(staffId, type);
+    set({ staffList: sm.getStaff() });
+  },
+
+  payStaffBonus() {
+    const engine = get()._engine;
+    if (!engine) return;
+    const sm = engine.getModule<import('../game/modules/StaffManager').StaffManager>('StaffManager');
+    sm.payBonus();
+    set({ staffList: sm.getStaff() });
+  },
+
+  setMentor(juniorId, mentorId) {
+    const engine = get()._engine;
+    if (!engine) return;
+    const sm = engine.getModule<import('../game/modules/StaffManager').StaffManager>('StaffManager');
+    sm.setMentor(juniorId, mentorId);
+    set({ staffList: sm.getStaff() });
+  },
+
+  startDRDrill(costNTD) {
+    const engine = get()._engine;
+    if (!engine) return;
+    const sec = engine.getModule<SecurityEngine>('SecurityEngine');
+    sec.startDRDrill(costNTD);
+    set({ securityComplianceScore: sec.getComplianceScore() });
+  },
+
+  acknowledgeBoard() {
+    const engine = get()._engine;
+    if (!engine) return;
+    const be = engine.getModule<BoardEngine>('BoardEngine');
+    be.acknowledgeReview();
+    set({ boardPendingReview: false });
+  },
+
   scheduleMaintenance(region, offPeak) {
     const engine = get()._engine;
     if (!engine) return;
@@ -403,6 +487,10 @@ export const useUIStore = create<UIState>((set, get) => ({
     const tutorial = engine.getModule<TutorialEngine>('TutorialEngine');
     const ach = engine.getModule<AchievementEngine>('AchievementEngine');
     const comp = engine.getModule<CompetitorEngine>('CompetitorEngine');
+    const strat = engine.getModule<StrategyEngine>('StrategyEngine');
+    const cust = engine.getModule<CustomerEngine>('CustomerEngine');
+    const vend = engine.getModule<VendorEngine>('VendorEngine');
+    const board = engine.getModule<BoardEngine>('BoardEngine');
 
     set({
       _engine: engine,
@@ -442,6 +530,16 @@ export const useUIStore = create<UIState>((set, get) => ({
       competitors: comp.getCompetitors(),
       playerMarketShare: comp.getPlayerMarketShare(),
       maintenanceStates: fm.getAllMaintenanceStates(),
+      strategyScores: strat.getScores(),
+      strategyDominantRoute: strat.getDominantRoute(),
+      strategyEstablishedRoutes: strat.getEstablishedRoutes(),
+      namedCustomers: cust.getCustomers(),
+      vendors: vend.getVendors(),
+      boardKPIs: board.getKPIs(),
+      boardYearResults: board.getYearResults(),
+      boardGameOver: board.isGameOver(),
+      boardPendingReview: board.isPendingReview(),
+      drDrills: sec.getDRDrills(),
     });
 
     // Start tutorial if not completed (after a brief delay so UI is mounted)
@@ -486,6 +584,16 @@ export const useUIStore = create<UIState>((set, get) => ({
         competitors: comp.getCompetitors(),
         playerMarketShare: comp.getPlayerMarketShare(),
         maintenanceStates: fm.getAllMaintenanceStates(),
+        strategyScores: strat.getScores(),
+        strategyDominantRoute: strat.getDominantRoute(),
+        strategyEstablishedRoutes: strat.getEstablishedRoutes(),
+        namedCustomers: cust.getCustomers(),
+        vendors: vend.getVendors(),
+        boardKPIs: board.getKPIs(),
+        boardYearResults: board.getYearResults(),
+        boardGameOver: board.isGameOver(),
+        boardPendingReview: board.isPendingReview(),
+        drDrills: sec.getDRDrills(),
       });
     });
 
@@ -622,6 +730,65 @@ export const useUIStore = create<UIState>((set, get) => ({
 
     bus.subscribe('reputation.satisfaction_changed', () => {
       set({ satisfactionScore: rep.getSatisfactionScore() });
+    });
+
+    bus.subscribe('strategy.route_established', () => {
+      set({
+        strategyScores: strat.getScores(),
+        strategyDominantRoute: strat.getDominantRoute(),
+        strategyEstablishedRoutes: strat.getEstablishedRoutes(),
+      });
+    });
+
+    bus.subscribe('customer.acquired', () => {
+      set({ namedCustomers: cust.getCustomers() });
+    });
+
+    bus.subscribe('customer.churned', () => {
+      set({ namedCustomers: cust.getCustomers() });
+    });
+
+    bus.subscribe('vendor.level_up', () => {
+      set({ vendors: vend.getVendors() });
+    });
+
+    bus.subscribe('vendor.platinum_unlocked', (e) => {
+      const p = e.payload as { message: string };
+      set({ vendors: vend.getVendors() });
+      // toast is handled in GameLayout
+      void p;
+    });
+
+    bus.subscribe('board.kpi_set', () => {
+      set({ boardKPIs: board.getKPIs() });
+    });
+
+    bus.subscribe('board.quarterly_review', () => {
+      set({ boardKPIs: board.getKPIs(), boardPendingReview: board.isPendingReview() });
+    });
+
+    bus.subscribe('board.year_end_result', () => {
+      set({
+        boardKPIs: board.getKPIs(),
+        boardYearResults: board.getYearResults(),
+        boardPendingReview: board.isPendingReview(),
+      });
+    });
+
+    bus.subscribe('board.game_over', () => {
+      set({ boardGameOver: true, boardPendingReview: true });
+    });
+
+    bus.subscribe('staff.certification_completed', () => {
+      set({ staffList: sm.getStaff() });
+    });
+
+    bus.subscribe('security.dr_drill_started', () => {
+      set({ drDrills: sec.getDRDrills() });
+    });
+
+    bus.subscribe('security.dr_drill_completed', () => {
+      set({ drDrills: sec.getDRDrills(), securityComplianceScore: sec.getComplianceScore() });
     });
   },
 }));

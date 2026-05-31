@@ -11,6 +11,10 @@ import { SecurityPanel } from './panels/SecurityPanel';
 import { EventTimelinePanel } from './panels/EventTimelinePanel';
 import { TechTreePanel } from './panels/TechTreePanel';
 import { ReputationPanel } from './panels/ReputationPanel';
+import { CustomerPanel } from './panels/CustomerPanel';
+import { VendorPanel } from './panels/VendorPanel';
+import { BoardPanel } from './panels/BoardPanel';
+import { StrategyPanel } from './panels/StrategyPanel';
 import { TutorialOverlay } from './ui/TutorialOverlay';
 import { ToastContainer } from './ui/ToastContainer';
 import { EventModal } from './ui/EventModal';
@@ -30,7 +34,8 @@ function fmtCash(n: number): string {
 
 type CenterTab =
   | 'facility' | 'hardware' | 'software' | 'contract'
-  | 'staff' | 'security' | 'timeline' | 'techtree' | 'reputation';
+  | 'staff' | 'security' | 'timeline' | 'techtree' | 'reputation'
+  | 'customers' | 'vendors' | 'board' | 'strategy';
 
 const TAB_LABELS: Record<CenterTab, string> = {
   facility:   '🏢 機房',
@@ -42,11 +47,16 @@ const TAB_LABELS: Record<CenterTab, string> = {
   timeline:   '📅 時間軸',
   techtree:   '🔬 科技樹',
   reputation: '⭐ 聲譽',
+  customers:  '🤝 客戶',
+  vendors:    '🏭 供應商',
+  board:      '📊 董事會',
+  strategy:   '🗺️ 策略',
 };
 
 const TAB_ORDER: CenterTab[] = [
   'facility', 'hardware', 'software', 'contract',
   'staff', 'security', 'timeline', 'techtree', 'reputation',
+  'customers', 'vendors', 'board', 'strategy',
 ];
 
 export const GameLayout: React.FC = () => {
@@ -68,11 +78,18 @@ export const GameLayout: React.FC = () => {
     competitors,
     playerMarketShare,
     maintenanceStates,
+    strategyScores, strategyDominantRoute, strategyEstablishedRoutes,
+    namedCustomers,
+    vendors,
+    boardKPIs, boardYearResults, boardGameOver, boardPendingReview,
+    drDrills,
     isPaused,
     postJobOpening, hireStaff, layoffStaff,
     startTechResearch, cancelTechResearch,
     makeTimelineDecision, resolveRandomEvent,
     scheduleMaintenance, performGeneratorMaintenance,
+    sendForCertification, payStaffBonus, setMentor,
+    startDRDrill, acknowledgeBoard,
     setSpeed,
   } = useUIStore();
 
@@ -238,6 +255,77 @@ export const GameLayout: React.FC = () => {
           addToast('warning', `🌀 颱風警報：${p.region}`);
         }
       }),
+      bus.subscribe('customer.acquired', (e) => {
+        const p = e.payload as { name: string; industry: string };
+        pushEventLog(e, `🤝 新客戶：${p.name}`, 'var(--accent-green)');
+      }),
+      bus.subscribe('customer.churned', (e) => {
+        const p = e.payload as { name: string };
+        pushEventLog(e, `👋 客戶流失：${p.name}`, 'var(--accent-red)');
+        addToast('warning', `客戶流失：${p.name}`);
+      }),
+      bus.subscribe('customer.referral_available', (e) => {
+        const p = e.payload as { referrerName: string; prospectName: string };
+        pushEventLog(e, `💌 推薦客戶：${p.referrerName} 推薦 ${p.prospectName}`, 'var(--accent-cyan)');
+        addToast('info', `客戶推薦：${p.prospectName}`);
+      }),
+      bus.subscribe('vendor.level_up', (e) => {
+        const p = e.payload as { vendorName: string; toLevel: string; discount: number };
+        pushEventLog(e, `🏭 供應商升級：${p.vendorName} → ${p.toLevel}`, 'var(--accent-cyan)');
+        addToast('success', `${p.vendorName} 升為 ${p.toLevel}！折扣 ${Math.round(p.discount * 100)}%`);
+      }),
+      bus.subscribe('vendor.platinum_unlocked', (e) => {
+        const p = e.payload as { vendorName: string; message: string };
+        pushEventLog(e, `💎 ${p.vendorName} 達到 Platinum！`, 'var(--accent-cyan)');
+        showModal({ title: `💎 ${p.vendorName} 白金合作`, body: p.message, severity: 'info' });
+      }),
+      bus.subscribe('strategy.route_established', (e) => {
+        const p = e.payload as { route: string };
+        pushEventLog(e, `🗺️ 策略路線確立：${p.route}`, 'var(--accent-purple)');
+        addToast('success', `策略路線確立：${p.route}！RFP 投標加成 +30%`);
+      }),
+      bus.subscribe('board.quarterly_review', (e) => {
+        const p = e.payload as { quarter: number; achievedCount: number; totalCount: number };
+        pushEventLog(e, `📊 Q${p.quarter} 季報：KPI ${p.achievedCount}/${p.totalCount} 達成`, 'var(--accent-purple)');
+        addToast('info', `Q${p.quarter} 季報：${p.achievedCount}/${p.totalCount} KPI 達成`);
+      }),
+      bus.subscribe('board.year_end_result', (e) => {
+        const p = e.payload as { year: number; achievedCount: number; totalCount: number; bonus: number; hadWarning: boolean };
+        const color = p.hadWarning ? 'var(--accent-red)' : 'var(--accent-green)';
+        pushEventLog(e, `📊 ${p.year} 年度董事會：${p.achievedCount}/${p.totalCount} KPI`, color);
+        if (p.hadWarning) {
+          setCenterTab('board');
+          showModal({ title: `⚠ ${p.year} 年度警告`, body: `本年度未達標 KPI 超半數（${p.achievedCount}/${p.totalCount}），董事會發出警告。連續兩年失敗將觸發 Game Over！`, severity: 'warning' });
+        } else if (p.bonus > 0) {
+          addToast('success', `年度達標！獎金 NT$${(p.bonus / 1000).toFixed(0)}K`);
+        }
+      }),
+      bus.subscribe('board.bonus_awarded', (e) => {
+        const p = e.payload as { amount: number; year: number };
+        pushEventLog(e, `🏆 ${p.year} 年度獎金：NT$${p.amount.toLocaleString()}`, 'var(--accent-green)');
+      }),
+      bus.subscribe('board.game_over', (e) => {
+        const p = e.payload as { reason: string };
+        pushEventLog(e, `💀 GAME OVER：${p.reason}`, 'var(--accent-red)');
+        setSpeed(0);
+        setCenterTab('board');
+        showModal({ title: '💀 GAME OVER', body: p.reason, severity: 'critical' });
+      }),
+      bus.subscribe('security.dr_drill_started', (e) => {
+        pushEventLog(e, '🔄 DR 容災演練開始', 'var(--accent-cyan)');
+        addToast('info', 'DR 演練進行中…');
+      }),
+      bus.subscribe('security.dr_drill_completed', (e) => {
+        const p = e.payload as { status: string; complianceBonus: number };
+        const passed = p.status === 'passed';
+        pushEventLog(e, `🔄 DR 演練${passed ? '通過' : '失敗'}`, passed ? 'var(--accent-green)' : 'var(--accent-red)');
+        addToast(passed ? 'success' : 'error', `DR 演練${passed ? `通過！合規 +${p.complianceBonus.toFixed(0)}%` : '失敗'}`);
+      }),
+      bus.subscribe('staff.certification_completed', (e) => {
+        const p = e.payload as { staffName: string; certType: string };
+        pushEventLog(e, `🏅 認證取得：${p.staffName} — ${p.certType}`, 'var(--accent-green)');
+        addToast('success', `${p.staffName} 取得 ${p.certType} 認證！`);
+      }),
     ];
     return () => unsubs.forEach(u => u());
   }, [_engine, addToast, showModal, setSpeed]);
@@ -309,6 +397,12 @@ export const GameLayout: React.FC = () => {
                 {tab === 'contract' && pendingRFPs.length > 0 && (
                   <span className="tab-badge info">{pendingRFPs.length}</span>
                 )}
+                {tab === 'board' && boardPendingReview && (
+                  <span className="tab-badge warn">!</span>
+                )}
+                {tab === 'board' && boardGameOver && (
+                  <span className="tab-badge danger">!</span>
+                )}
               </button>
             ))}
             <div className="tab-satisfaction">
@@ -369,6 +463,9 @@ export const GameLayout: React.FC = () => {
                 onPostOpening={postJobOpening}
                 onHire={hireStaff}
                 onLayoff={layoffStaff}
+                onSendForCertification={sendForCertification}
+                onPayBonus={payStaffBonus}
+                onSetMentor={setMentor}
               />
             )}
             {centerTab === 'security' && (
@@ -376,6 +473,8 @@ export const GameLayout: React.FC = () => {
                 activeIncidents={activeIncidents}
                 securityPostureScore={securityPostureScore}
                 securityComplianceScore={securityComplianceScore}
+                drDrills={drDrills}
+                onStartDRDrill={startDRDrill}
               />
             )}
             {centerTab === 'timeline' && (
@@ -402,6 +501,28 @@ export const GameLayout: React.FC = () => {
                 achievements={achievements}
                 competitors={competitors}
                 playerMarketShare={playerMarketShare}
+              />
+            )}
+            {centerTab === 'customers' && (
+              <CustomerPanel namedCustomers={namedCustomers} />
+            )}
+            {centerTab === 'vendors' && (
+              <VendorPanel vendors={vendors} />
+            )}
+            {centerTab === 'board' && (
+              <BoardPanel
+                boardKPIs={boardKPIs}
+                boardYearResults={boardYearResults}
+                boardGameOver={boardGameOver}
+                boardPendingReview={boardPendingReview}
+                onAcknowledge={acknowledgeBoard}
+              />
+            )}
+            {centerTab === 'strategy' && (
+              <StrategyPanel
+                strategyScores={strategyScores}
+                strategyDominantRoute={strategyDominantRoute}
+                strategyEstablishedRoutes={strategyEstablishedRoutes}
               />
             )}
           </div>

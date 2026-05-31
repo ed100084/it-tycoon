@@ -1,6 +1,7 @@
 import type {
   EntityId, GameConfig, GameDate, IEventBus, IGameModule, Money,
   SecurityConfig, Incident, IncidentResponseRecord,
+  DRDrill, SecurityAuditRecord, AuditCheckItem,
 } from '../core/types';
 import {
   IncidentType, IncidentSeverity, IncidentStatus, ResponseAction,
@@ -78,6 +79,11 @@ interface SecurityEngineState {
   incidentHistory: Incident[];
   complianceScore: number;
   securityPostureScore: number;
+  drDrills: DRDrill[];
+  drillsThisYear: number;
+  auditHistory: SecurityAuditRecord[];
+  auditTriggeredYear: number | null;
+  hardwareHealthScore: number;
   eosRiskMultiplier: number;
   eolHardwareRisk: number;
   defenseModifiers: Record<IncidentType, number>;
@@ -116,6 +122,13 @@ function clamp(v: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, v));
 }
 
+function addDrillMonths(date: GameDate, months: number): GameDate {
+  let { year, month } = date;
+  month += months;
+  while (month > 12) { month -= 12; year++; }
+  return { year, month };
+}
+
 export class SecurityEngine implements IGameModule {
   readonly moduleId = 'SecurityEngine';
 
@@ -129,6 +142,11 @@ export class SecurityEngine implements IGameModule {
     incidentHistory: [],
     complianceScore: 70,
     securityPostureScore: 70,
+    drDrills: [],
+    drillsThisYear: 0,
+    auditHistory: [],
+    auditTriggeredYear: null,
+    hardwareHealthScore: 100,
     eosRiskMultiplier: 1.0,
     eolHardwareRisk: 0.0,
     defenseModifiers: makeDefaultDefenseModifiers(),
@@ -226,6 +244,49 @@ export class SecurityEngine implements IGameModule {
     incident.responses.push(response);
   }
 
+  // ── DR Drill ─────────────────────────────────────────────────────────────
+
+  getDRDrills(): DRDrill[] {
+    return [...this.state.drDrills];
+  }
+
+  canRunDrillThisYear(): boolean {
+    return this.state.drillsThisYear < 2;
+  }
+
+  startDRDrill(costNTD: Money): DRDrill | null {
+    if (!this.canRunDrillThisYear()) return null;
+    const successChance = this.calcDrillSuccessChance();
+    const drill: DRDrill = {
+      id: crypto.randomUUID() as EntityId,
+      startedAt: { ...this.currentDate },
+      completesAt: addDrillMonths(this.currentDate, 1),
+      costNTD,
+      status: 'in_progress',
+      successChance,
+      yearOfDrill: this.currentDate.year,
+    };
+    this.state.drDrills.push(drill);
+    this.state.drillsThisYear++;
+    this.bus.publish({
+      type: 'security.drill_started',
+      payload: { drillId: drill.id, cost: costNTD, successChance },
+      gameDate: this.currentDate,
+      source: this.moduleId,
+    });
+    return drill;
+  }
+
+  getAuditHistory(): SecurityAuditRecord[] {
+    return [...this.state.auditHistory];
+  }
+
+  getLatestAudit(): SecurityAuditRecord | null {
+    return this.state.auditHistory.length > 0
+      ? this.state.auditHistory[this.state.auditHistory.length - 1]
+      : null;
+  }
+
   getThreatAssessment(): {
     baseRates: Record<IncidentType, number>;
     modifiedRates: Record<IncidentType, number>;
@@ -321,6 +382,20 @@ export class SecurityEngine implements IGameModule {
       const p = e.payload as { ratio: number };
       this.staffCoverageRatio = p.ratio;
     }, this.moduleId);
+
+    bus.subscribe('time.year_end', () => {
+      this.state.drillsThisYear = 0;
+      this.advanceDrills();
+    }, this.moduleId);
+
+    // Q3 audit trigger (month 9)
+    bus.subscribe('time.month_end', (e) => {
+      const p = e.payload as { newDate: GameDate };
+      if (p.newDate.month === 9 && this.state.auditTriggeredYear !== p.newDate.year) {
+        this.state.auditTriggeredYear = p.newDate.year;
+        this.runSecurityAudit();
+      }
+    }, this.moduleId);
   }
 
   tick(_deltaMs: number): void {}
@@ -342,6 +417,11 @@ export class SecurityEngine implements IGameModule {
     this.state.eolHardwareRisk       = (saved.eolHardwareRisk as number) ?? 0.0;
     this.state.threatLevelMod        = (saved.threatLevelMod as number) ?? 1.0;
     this.state.monthlyRevenue        = (saved.monthlyRevenue as number) ?? 0;
+    this.state.drDrills              = (saved.drDrills as DRDrill[]) ?? [];
+    this.state.drillsThisYear        = (saved.drillsThisYear as number) ?? 0;
+    this.state.auditHistory          = (saved.auditHistory as SecurityAuditRecord[]) ?? [];
+    this.state.auditTriggeredYear    = (saved.auditTriggeredYear as number | null) ?? null;
+    this.state.hardwareHealthScore   = (saved.hardwareHealthScore as number) ?? 100;
     if (saved.defenseModifiers) {
       Object.assign(this.state.defenseModifiers, saved.defenseModifiers);
     }
@@ -617,6 +697,111 @@ export class SecurityEngine implements IGameModule {
           break;
         }
       }
+    }
+  }
+
+  // ── DR Drill helpers ─────────────────────────────────────────────────────
+
+  private calcDrillSuccessChance(): number {
+    const coverageFactor = clamp(this.staffCoverageRatio, 0, 1);
+    const hwFactor = this.state.hardwareHealthScore / 100;
+    const expFactor = this.state.drDrills.filter(d => d.status === 'passed').length * 0.05;
+    return clamp(coverageFactor * 0.4 + hwFactor * 0.4 + expFactor + 0.1, 0.05, 0.95);
+  }
+
+  private advanceDrills(): void {
+    for (const drill of this.state.drDrills) {
+      if (drill.status !== 'in_progress') continue;
+      const d = drill.completesAt;
+      if (
+        this.currentDate.year > d.year ||
+        (this.currentDate.year === d.year && this.currentDate.month >= d.month)
+      ) {
+        const passed = seededRand() < drill.successChance;
+        drill.status = passed ? 'passed' : 'failed';
+
+        const complianceDelta = passed ? 10 : 3;
+        const prev = this.state.complianceScore;
+        this.state.complianceScore = clamp(this.state.complianceScore + complianceDelta, 0, 100);
+
+        if (passed && seededRand() < 0.10) {
+          // 10% chance a failed drill causes real downtime
+          this.generateIncident(IncidentType.NetworkOutage);
+        }
+
+        this.bus.publish({
+          type: 'security.drill_completed',
+          payload: {
+            drillId: drill.id,
+            passed,
+            complianceDelta,
+            complianceScore: this.state.complianceScore,
+          },
+          gameDate: this.currentDate,
+          source: this.moduleId,
+        });
+
+        if (this.state.complianceScore !== prev) {
+          this.bus.publish({
+            type: 'security.compliance_changed',
+            payload: { score: this.state.complianceScore, delta: this.state.complianceScore - prev },
+            gameDate: this.currentDate,
+            source: this.moduleId,
+          });
+        }
+      }
+    }
+  }
+
+  // ── Annual security audit ────────────────────────────────────────────────
+
+  private runSecurityAudit(): void {
+    const checklist: AuditCheckItem[] = [
+      { name: '防火牆版本更新',   passed: this.state.complianceScore > 50,             points: 20 },
+      { name: 'OS 安全更新',      passed: this.state.eosRiskMultiplier < 1.3,          points: 20 },
+      { name: '密碼政策',         passed: this.state.defenseModifiers[IncidentType.SocialEngineering] > 0, points: 15 },
+      { name: '備份頻率合規',     passed: this.state.defenseModifiers[IncidentType.Ransomware] > 0,        points: 25 },
+      { name: '日誌保存 ≥ 90 天', passed: this.state.complianceScore > 60,             points: 20 },
+    ];
+
+    const score = checklist.filter(c => c.passed).reduce((s, c) => s + c.points, 0);
+    const passed = score >= 70;
+    const complianceDelta = passed ? 5 : -10;
+    const prev = this.state.complianceScore;
+    this.state.complianceScore = clamp(this.state.complianceScore + complianceDelta, 0, 100);
+
+    const record: SecurityAuditRecord = {
+      id: crypto.randomUUID() as EntityId,
+      year: this.currentDate.year,
+      triggeredAt: { ...this.currentDate },
+      status: passed ? 'passed' : 'failed',
+      score,
+      checklist,
+    };
+    this.state.auditHistory.push(record);
+    if (this.state.auditHistory.length > 10) this.state.auditHistory.shift();
+
+    this.bus.publish({
+      type: 'security.audit_completed',
+      payload: {
+        auditId: record.id,
+        year: record.year,
+        passed,
+        score,
+        complianceDelta,
+        complianceScore: this.state.complianceScore,
+      },
+      gameDate: this.currentDate,
+      source: this.moduleId,
+    });
+
+    if (this.state.complianceScore !== prev) {
+      this.bus.publish({
+        type: 'security.compliance_changed',
+        payload: { score: this.state.complianceScore, delta: this.state.complianceScore - prev },
+        gameDate: this.currentDate,
+        source: this.moduleId,
+      });
     }
   }
 }

@@ -16,6 +16,10 @@ import { ReputationEngine } from './game/modules/ReputationEngine';
 import { TutorialEngine } from './game/modules/TutorialEngine';
 import { AchievementEngine } from './game/modules/AchievementEngine';
 import { CompetitorEngine } from './game/modules/CompetitorEngine';
+import { CustomerEngine } from './game/modules/CustomerEngine';
+import { VendorEngine } from './game/modules/VendorEngine';
+import { BoardEngine } from './game/modules/BoardEngine';
+import { StrategyEngine } from './game/modules/StrategyEngine';
 import { DEFAULT_CONFIG } from './game/config/default.config';
 import { useUIStore } from './store/uiStore';
 
@@ -37,7 +41,11 @@ engine
   .register(new ReputationEngine())
   .register(new TutorialEngine())
   .register(new AchievementEngine())
-  .register(new CompetitorEngine());
+  .register(new CompetitorEngine())
+  .register(new CustomerEngine())
+  .register(new VendorEngine())
+  .register(new BoardEngine())
+  .register(new StrategyEngine());
 
 const App: React.FC = () => {
   const [phase, setPhase] = useState<Phase>('boot');

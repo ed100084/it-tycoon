@@ -1,6 +1,6 @@
 import React from 'react';
 import { IncidentSeverity, IncidentType } from '../../game/core/types';
-import type { Incident } from '../../game/core/types';
+import type { Incident, DRDrill } from '../../game/core/types';
 
 const SEV_COLORS: Record<IncidentSeverity, string> = {
   [IncidentSeverity.P1]: 'var(--tm-red)',
@@ -29,6 +29,8 @@ interface Props {
   activeIncidents: Incident[];
   securityPostureScore: number;
   securityComplianceScore: number;
+  drDrills?: DRDrill[];
+  onStartDRDrill?: (cost: number) => void;
 }
 
 function ScoreBar({ label, score, color }: { label: string; score: number; color: string }) {
@@ -45,16 +47,54 @@ function ScoreBar({ label, score, color }: { label: string; score: number; color
   );
 }
 
+const DR_DRILL_COST = 200_000;
+
 export const SecurityPanel: React.FC<Props> = ({
   activeIncidents, securityPostureScore, securityComplianceScore,
+  drDrills = [], onStartDRDrill,
 }) => {
+  const passedDrills = drDrills.filter(d => d.status === 'passed').length;
+  const latestDrill = drDrills.length > 0 ? drDrills[drDrills.length - 1] : null;
+
   return (
     <div style={{ fontSize: 12, color: 'var(--tm-text)' }}>
+      {/* Scores */}
       <div style={{ marginBottom: 12 }}>
         <ScoreBar label="安全態勢" score={securityPostureScore} color={securityPostureScore >= 70 ? 'var(--tm-green)' : securityPostureScore >= 40 ? 'var(--tm-yellow)' : 'var(--tm-red)'} />
         <ScoreBar label="合規分數" score={securityComplianceScore} color={securityComplianceScore >= 80 ? 'var(--tm-green)' : securityComplianceScore >= 60 ? 'var(--tm-yellow)' : 'var(--tm-red)'} />
       </div>
 
+      {/* DR Drill section */}
+      <div style={{ marginBottom: 12, padding: '8px 10px', background: '#0d0d1a', borderRadius: 4, border: '1px solid #223' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+          <div>
+            <div style={{ color: '#aaa', fontSize: 11 }}>🔄 DR 容災演練</div>
+            <div style={{ color: '#555', fontSize: 10 }}>通過演練提升合規分數 +8%，費用 NT$200K</div>
+          </div>
+          <div style={{ textAlign: 'right' }}>
+            <div style={{ color: 'var(--tm-cyan)', fontSize: 11 }}>通過：{passedDrills} 次</div>
+          </div>
+        </div>
+        {latestDrill && (
+          <div style={{ fontSize: 10, color: '#666', marginBottom: 6 }}>
+            最近一次：{latestDrill.startedAt.year}/{String(latestDrill.startedAt.month).padStart(2, '0')} —{' '}
+            <span style={{ color: latestDrill.status === 'passed' ? 'var(--tm-green)' : latestDrill.status === 'failed' ? 'var(--tm-red)' : 'var(--tm-yellow)' }}>
+              {latestDrill.status === 'passed' ? '通過' : latestDrill.status === 'failed' ? '失敗' : '進行中'}
+            </span>
+          </div>
+        )}
+        {onStartDRDrill && (
+          <button onClick={() => onStartDRDrill(DR_DRILL_COST)} style={{
+            padding: '3px 12px', fontSize: 11,
+            background: '#0d1a0d', border: '1px solid #448844',
+            borderRadius: 3, color: 'var(--tm-green)', cursor: 'pointer', width: '100%',
+          }}>
+            執行 DR 演練 (NT${(DR_DRILL_COST / 1000).toFixed(0)}K)
+          </button>
+        )}
+      </div>
+
+      {/* Active incidents */}
       <div style={{ borderTop: '1px solid #334', paddingTop: 8 }}>
         <div style={{ color: '#888', fontSize: 11, marginBottom: 6 }}>
           活躍事件 ({activeIncidents.length})
