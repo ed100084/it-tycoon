@@ -19,6 +19,12 @@ import { TechDebtPanel } from './panels/TechDebtPanel';
 import { CompliancePanel } from './panels/CompliancePanel';
 import { ExpansionPanel } from './panels/ExpansionPanel';
 import { EnergyPanel } from './panels/EnergyPanel';
+import { NetworkPanel } from './panels/NetworkPanel';
+import { ChangeManagementPanel } from './panels/ChangeManagementPanel';
+import { CloudStrategyPanel } from './panels/CloudStrategyPanel';
+import { RegulatoryPanel } from './panels/RegulatoryPanel';
+import { InsurancePanel } from './panels/InsurancePanel';
+import { CapacityPlanningPanel } from './panels/CapacityPlanningPanel';
 import { TutorialOverlay } from './ui/TutorialOverlay';
 import { ToastContainer } from './ui/ToastContainer';
 import { EventModal } from './ui/EventModal';
@@ -40,7 +46,8 @@ type CenterTab =
   | 'facility' | 'hardware' | 'software' | 'contract'
   | 'staff' | 'security' | 'timeline' | 'techtree' | 'reputation'
   | 'customers' | 'vendors' | 'board' | 'strategy'
-  | 'compliance' | 'energy';
+  | 'compliance' | 'energy'
+  | 'network' | 'changes' | 'cloud' | 'regulatory' | 'insurance' | 'capacity';
 
 const TAB_LABELS: Record<CenterTab, string> = {
   facility:   '🏢 機房',
@@ -58,12 +65,19 @@ const TAB_LABELS: Record<CenterTab, string> = {
   strategy:   '🗺️ 策略',
   compliance: '📜 合規',
   energy:     '⚡ 能源',
+  network:    '🌐 網路',
+  changes:    '📋 變更',
+  cloud:      '☁️ 雲端',
+  regulatory: '⚖️ 法規',
+  insurance:  '🛡️ 保險',
+  capacity:   '📊 容量',
 };
 
 const TAB_ORDER: CenterTab[] = [
   'facility', 'hardware', 'software', 'contract',
   'staff', 'security', 'timeline', 'techtree', 'reputation',
   'customers', 'vendors', 'board', 'strategy', 'compliance', 'energy',
+  'network', 'changes', 'cloud', 'regulatory', 'insurance', 'capacity',
 ];
 
 export const GameLayout: React.FC = () => {
@@ -107,6 +121,17 @@ export const GameLayout: React.FC = () => {
     setEnergyStrategy, installSolar, installStorage,
     resolveEventChain, setOnCallMode,
     setSpeed,
+    networkState,
+    changeManagementState,
+    cloudStrategyState,
+    regulatoryState,
+    insuranceState,
+    capacityPlanningState,
+    addISPContract, removeISPContract, setRedundancyMode, enableIXPeering,
+    submitChange, enableCAB, disableCAB,
+    setCloudStrategy,
+    startRegCompliance,
+    purchaseInsurance, cancelInsurance,
   } = useUIStore();
 
   const { addToast, showModal } = useToastStore();
@@ -605,6 +630,51 @@ export const GameLayout: React.FC = () => {
                 onInstallStorage={installStorage}
               />
             )}
+            {centerTab === 'network' && (
+              <NetworkPanel
+                networkState={networkState}
+                currentYear={currentDate.year}
+                onAddISP={addISPContract}
+                onRemoveISP={removeISPContract}
+                onSetRedundancy={setRedundancyMode}
+                onEnableIX={enableIXPeering}
+              />
+            )}
+            {centerTab === 'changes' && (
+              <ChangeManagementPanel
+                cmState={changeManagementState}
+                onSubmitChange={submitChange}
+                onEnableCAB={enableCAB}
+                onDisableCAB={disableCAB}
+              />
+            )}
+            {centerTab === 'cloud' && (
+              <CloudStrategyPanel
+                cloudState={cloudStrategyState}
+                currentYear={currentDate.year}
+                onSetStrategy={setCloudStrategy}
+              />
+            )}
+            {centerTab === 'regulatory' && (
+              <RegulatoryPanel
+                regulatoryState={regulatoryState}
+                currentYear={currentDate.year}
+                onStartCompliance={startRegCompliance}
+              />
+            )}
+            {centerTab === 'insurance' && (
+              <InsurancePanel
+                insuranceState={insuranceState}
+                monthlyRevenue={monthlyRevenueEstimate}
+                onPurchasePolicy={purchaseInsurance}
+                onCancelPolicy={cancelInsurance}
+              />
+            )}
+            {centerTab === 'capacity' && (
+              <CapacityPlanningPanel
+                planningState={capacityPlanningState}
+              />
+            )}
           </div>
         </section>
 
@@ -614,9 +684,9 @@ export const GameLayout: React.FC = () => {
       </main>
 
       <footer className="game-footer">
-        <span className="footer-text">IT-TYCOON v3.0 · Phase 1-3 完整版</span>
+        <span className="footer-text">IT-TYCOON v4.0 · 28 系統完整版</span>
         <span className="footer-warn">
-          機房 · 硬體 · 軟體 · 合約 · 人員 · 資安 · 時間軸 · 科技樹 · 聲譽
+          機房 · 硬體 · 軟體 · 合約 · 人員 · 資安 · 時間軸 · 科技樹 · 聲譽 · 網路 · 變更 · 雲端 · 法規 · 保險 · 容量
         </span>
       </footer>
 

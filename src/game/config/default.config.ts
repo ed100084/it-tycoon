@@ -2,6 +2,8 @@ import {
   CreditRating, FacilityRegion, CoolingLevel, ClimateRisk,
   StaffRole, IncidentType, IncidentSeverity, AcquisitionStatus,
   ComplianceCertType,
+  ISPProvider, BandwidthTier,
+  InsuranceType,
 } from '../core/types';
 import type { GameConfig } from '../core/types';
 
@@ -332,5 +334,88 @@ export const DEFAULT_CONFIG: Readonly<GameConfig> = Object.freeze({
     fixed3YPrepayMonths: 3,
     esgRfpBonus: 0.20,
     esgThresholdForBonus: 70,
+  },
+
+  network: {
+    bandwidthTiers: {
+      [BandwidthTier.B100M]: { mbps: 100,    monthlyFeeNTD:    50_000, unlockYear: 2000 },
+      [BandwidthTier.B1G]:   { mbps: 1_000,  monthlyFeeNTD:   300_000, unlockYear: 2003 },
+      [BandwidthTier.B10G]:  { mbps: 10_000, monthlyFeeNTD: 2_000_000, unlockYear: 2008 },
+      [BandwidthTier.B100G]: { mbps: 100_000,monthlyFeeNTD: 8_000_000, unlockYear: 2015 },
+    },
+    ispProviders: {
+      [ISPProvider.Chunghwa]:   { reliability: 99.9, costMultiplier: 1.20 },
+      [ISPProvider.FarEasTone]: { reliability: 99.5, costMultiplier: 1.00 },
+      [ISPProvider.APT]:        { reliability: 98.5, costMultiplier: 0.80 },
+    },
+    ixPeeringUnlockYear: 2005,
+    ixPeeringAnnualFeeNTD: 600_000,
+    ixPeeringBandwidthDiscount: 0.20,
+    utilizationWarningThreshold: 0.80,
+    utilizationSLADegradationThreshold: 0.95,
+    bandwidthMbpsPerContract: 10,
+  },
+
+  changeManagement: {
+    emergencyFailureRisk: 0.30,
+    shadowChangeFailureRisk: 0.30,
+    normalChangeDelayMonths: 1,
+    cabCostPerMonthNTD: 40_000,
+    maturityLevelThresholds: [0, 5, 15, 30, 50, 80],
+  },
+
+  cloudStrategy: {
+    cloudCompeteStartYear: 2010,
+    dataSovereigntyStartYear: 2018,
+    cloudPressureGrowthPerYear: 5,
+    hybridInvestmentCostNTD: 3_000_000,
+    mspTransformCostNTD: 10_000_000,
+    baseMigrationRiskPerMonth: 0.005,
+    hybridRevenuePerContract: 200_000,
+    mspRevenueMultiplier: 1.30,
+  },
+
+  regulatory: {
+    auditFrequencyMonthsMin: 10,
+    auditFrequencyMonthsMax: 14,
+    auditFailReputationPenalty: 10,
+  },
+
+  insurance: {
+    policyDefs: {
+      [InsuranceType.CyberSecurity]: {
+        basePremiumRate: 0.01,
+        coverageRate: 0.50,
+        minAnnualPremiumNTD:   500_000,
+        maxAnnualPremiumNTD: 5_000_000,
+      },
+      [InsuranceType.BusinessInterruption]: {
+        basePremiumRate: 0.005,
+        coverageRate: 0.60,
+        minAnnualPremiumNTD:   500_000,
+        maxAnnualPremiumNTD: 2_000_000,
+      },
+      [InsuranceType.DAndO]: {
+        basePremiumRate: 0.003,
+        coverageRate: 0.80,
+        minAnnualPremiumNTD:   100_000,
+        maxAnnualPremiumNTD:   500_000,
+      },
+      [InsuranceType.EAndO]: {
+        basePremiumRate: 0.004,
+        coverageRate: 0.70,
+        minAnnualPremiumNTD:   200_000,
+        maxAnnualPremiumNTD:   800_000,
+      },
+    },
+    claimPremiumIncrease: 0.20,
+    complianceDiscountRate: 0.10,
+  },
+
+  capacityPlanning: {
+    warningThreshold: 0.70,
+    criticalThreshold: 0.85,
+    forecastMonths: 6,
+    historyMonths: 6,
   },
 });

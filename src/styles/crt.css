@@ -2142,3 +2142,58 @@
 .esg-bar { height: 100%; border-radius: 2px; transition: width 0.4s; }
 .energy-strategy-btn { font-size: 0.82em; }
 .energy-strategy-btn.active { border-color: var(--accent-cyan); color: var(--accent-cyan); }
+
+/* ─── Network ──────────────────────────────────────────────────────────────── */
+.network-panel .util-bar-bg { background: #1a1a1a; height: 8px; border-radius: 2px; overflow: hidden; margin: 4px 0; }
+.network-panel .util-bar { height: 100%; border-radius: 2px; transition: width 0.4s; }
+.isp-contract-row { display: flex; align-items: center; gap: 8px; padding: 4px 0; border-bottom: 1px solid #1a1a1a; font-size: 0.86em; flex-wrap: wrap; }
+.network-add-section { margin-top: 12px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.redundancy-btn { font-size: 0.82em; }
+.redundancy-btn.active { border-color: var(--accent-cyan); color: var(--accent-cyan); }
+
+/* ─── Change Management ────────────────────────────────────────────────────── */
+.cm-panel .maturity-bar-bg { background: #1a1a1a; height: 8px; border-radius: 2px; overflow: hidden; margin: 4px 0; }
+.cm-panel .maturity-bar { height: 100%; background: var(--accent-cyan); border-radius: 2px; transition: width 0.4s; }
+.change-type-badge { font-size: 0.75em; padding: 1px 5px; border-radius: 2px; text-transform: uppercase; font-weight: bold; }
+.change-type-standard { background: #1a2a1a; color: var(--accent-green); }
+.change-type-normal    { background: #1a1a2a; color: var(--accent-cyan); }
+.change-type-emergency { background: #2a1a1a; color: var(--accent-red); }
+.change-row { display: flex; align-items: center; gap: 8px; padding: 4px 0; border-bottom: 1px solid #1a1a1a; font-size: 0.86em; flex-wrap: wrap; }
+.cm-form { margin-top: 12px; display: flex; gap: 8px; flex-wrap: wrap; align-items: flex-end; }
+
+/* ─── Cloud Strategy ───────────────────────────────────────────────────────── */
+.cloud-panel .pressure-bar-bg { background: #1a1a1a; height: 10px; border-radius: 2px; overflow: hidden; margin: 4px 0; }
+.cloud-panel .pressure-bar { height: 100%; border-radius: 2px; transition: width 0.4s; }
+.cloud-strategy-btn { font-size: 0.82em; min-width: 100px; }
+.cloud-strategy-btn.active { border-color: var(--accent-cyan); color: var(--accent-cyan); }
+.cloud-sovereignty-banner { background: #1a2a1a; border: 1px solid var(--accent-green); border-radius: 4px; padding: 6px 10px; margin-top: 8px; font-size: 0.88em; color: var(--accent-green); }
+
+/* ─── Regulatory ───────────────────────────────────────────────────────────── */
+.regulation-row { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid #1a1a1a; flex-wrap: wrap; font-size: 0.88em; }
+.reg-status-badge { font-size: 0.75em; padding: 1px 5px; border-radius: 2px; font-weight: bold; }
+.reg-status-compliant    { background: #1a2a1a; color: var(--accent-green); }
+.reg-status-inprogress   { background: #2a2a1a; color: var(--accent-yellow); }
+.reg-status-noncompliant { background: #2a1a1a; color: var(--accent-red); }
+.reg-status-notactive    { background: #1a1a1a; color: #555; }
+.audit-row { display: flex; align-items: center; gap: 8px; padding: 3px 0; font-size: 0.82em; opacity: 0.85; }
+
+/* ─── Insurance ────────────────────────────────────────────────────────────── */
+.insurance-panel .policy-card { background: #0d1117; border: 1px solid #1e2a38; border-radius: 4px; padding: 8px; margin-bottom: 8px; }
+.insurance-panel .policy-card.active { border-color: var(--accent-cyan); }
+.policy-type-label { font-weight: bold; font-size: 0.9em; }
+.claim-row { display: flex; align-items: center; gap: 8px; padding: 3px 0; font-size: 0.82em; opacity: 0.85; }
+
+/* ─── Capacity Planning ────────────────────────────────────────────────────── */
+.capacity-panel .metric-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 8px; }
+.capacity-metric-card { background: #0d1117; border: 1px solid #1e2a38; border-radius: 4px; padding: 8px; }
+.metric-name { font-size: 0.82em; opacity: 0.8; margin-bottom: 4px; }
+.metric-util-bar-bg { background: #1a1a1a; height: 8px; border-radius: 2px; overflow: hidden; margin: 4px 0; }
+.metric-util-bar { height: 100%; border-radius: 2px; transition: width 0.4s; }
+.capacity-alert-green  { color: var(--accent-green); }
+.capacity-alert-yellow { color: var(--accent-yellow); }
+.capacity-alert-red    { color: var(--accent-red); }
+.recommendation-row { display: flex; align-items: center; gap: 8px; padding: 4px 0; border-bottom: 1px solid #1a1a1a; font-size: 0.86em; flex-wrap: wrap; }
+.urgency-badge { font-size: 0.75em; padding: 1px 5px; border-radius: 2px; font-weight: bold; }
+.urgency-green  { background: #1a2a1a; color: var(--accent-green); }
+.urgency-yellow { background: #2a2a1a; color: var(--accent-yellow); }
+.urgency-red    { background: #2a1a1a; color: var(--accent-red); }

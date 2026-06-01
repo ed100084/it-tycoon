@@ -55,9 +55,21 @@ import type { TechDebtEngine } from '../game/modules/TechDebtEngine';
 import type { ComplianceEngine } from '../game/modules/ComplianceEngine';
 import type { ExpansionEngine } from '../game/modules/ExpansionEngine';
 import type { EnergyEngine } from '../game/modules/EnergyEngine';
+import type { NetworkEngine } from '../game/modules/NetworkEngine';
+import type { ChangeManagementEngine } from '../game/modules/ChangeManagementEngine';
+import type { CloudStrategyEngine } from '../game/modules/CloudStrategyEngine';
+import type { RegulatoryEngine } from '../game/modules/RegulatoryEngine';
+import type { InsuranceEngine } from '../game/modules/InsuranceEngine';
+import type { CapacityPlanningEngine } from '../game/modules/CapacityPlanningEngine';
 import type {
   NamedCustomer, VendorRelationship, KPITarget, BoardYearResult,
   StrategyScores, CertificationType, DRDrill,
+  NetworkState, ISPProvider, BandwidthTier, RedundancyMode,
+  ChangeManagementState, ChangeType,
+  CloudStrategyState, CloudStrategy,
+  RegulatoryState, RegulationId,
+  InsuranceState, InsuranceType,
+  CapacityPlanningState,
 } from '../game/core/types';
 
 export interface UIState {
@@ -171,6 +183,24 @@ export interface UIState {
   // Event chains
   activeEventChains: ActiveEventChain[];
 
+  // Network
+  networkState: NetworkState | null;
+
+  // Change Management
+  changeManagementState: ChangeManagementState | null;
+
+  // Cloud Strategy
+  cloudStrategyState: CloudStrategyState | null;
+
+  // Regulatory
+  regulatoryState: RegulatoryState | null;
+
+  // Insurance
+  insuranceState: InsuranceState | null;
+
+  // Capacity Planning
+  capacityPlanningState: CapacityPlanningState | null;
+
   // Engine ref (not reactive, just for actions)
   _engine: GameEngine | null;
 
@@ -209,6 +239,22 @@ export interface UIState {
   installSolar: () => void;
   installStorage: () => void;
   resolveEventChain: (chainId: string) => void;
+  // Network actions
+  addISPContract: (provider: ISPProvider, tier: BandwidthTier) => void;
+  removeISPContract: (contractId: string) => void;
+  setRedundancyMode: (mode: RedundancyMode) => void;
+  enableIXPeering: () => void;
+  // Change Management actions
+  submitChange: (type: ChangeType, title: string) => void;
+  enableCAB: () => void;
+  disableCAB: () => void;
+  // Cloud Strategy actions
+  setCloudStrategy: (strategy: CloudStrategy) => void;
+  // Regulatory actions
+  startRegCompliance: (id: RegulationId) => void;
+  // Insurance actions
+  purchaseInsurance: (type: InsuranceType) => void;
+  cancelInsurance: (policyId: string) => void;
   setOnCallMode: (mode: ShiftMode) => void;
   scheduleMaintenance: (region: FacilityRegion, offPeak: boolean) => void;
   performGeneratorMaintenance: (region: FacilityRegion) => void;
@@ -283,6 +329,13 @@ export const useUIStore = create<UIState>((set, get) => ({
   hasSecondFacility: false,
   energyState: null,
   activeEventChains: [],
+
+  networkState: null,
+  changeManagementState: null,
+  cloudStrategyState: null,
+  regulatoryState: null,
+  insuranceState: null,
+  capacityPlanningState: null,
 
   _engine: null,
 
@@ -550,6 +603,96 @@ export const useUIStore = create<UIState>((set, get) => ({
     set({ activeEventChains: et.getActiveChains() });
   },
 
+  addISPContract(provider, tier) {
+    const engine = get()._engine;
+    if (!engine) return;
+    const ne = engine.getModule<NetworkEngine>('NetworkEngine');
+    ne.addISPContract(provider, tier);
+    set({ networkState: ne.getNetworkState() });
+  },
+
+  removeISPContract(contractId) {
+    const engine = get()._engine;
+    if (!engine) return;
+    const ne = engine.getModule<NetworkEngine>('NetworkEngine');
+    ne.removeISPContract(contractId);
+    set({ networkState: ne.getNetworkState() });
+  },
+
+  setRedundancyMode(mode) {
+    const engine = get()._engine;
+    if (!engine) return;
+    const ne = engine.getModule<NetworkEngine>('NetworkEngine');
+    ne.setRedundancyMode(mode);
+    set({ networkState: ne.getNetworkState() });
+  },
+
+  enableIXPeering() {
+    const engine = get()._engine;
+    if (!engine) return;
+    const ne = engine.getModule<NetworkEngine>('NetworkEngine');
+    const time = engine.getModule<TimeEngine>('TimeEngine');
+    ne.enableIXPeering(time.getCurrentDate().year);
+    set({ networkState: ne.getNetworkState() });
+  },
+
+  submitChange(type, title) {
+    const engine = get()._engine;
+    if (!engine) return;
+    const cm = engine.getModule<ChangeManagementEngine>('ChangeManagementEngine');
+    cm.submitChange(type, title);
+    set({ changeManagementState: cm.getState_CM() });
+  },
+
+  enableCAB() {
+    const engine = get()._engine;
+    if (!engine) return;
+    const cm = engine.getModule<ChangeManagementEngine>('ChangeManagementEngine');
+    cm.enableCAB();
+    set({ changeManagementState: cm.getState_CM() });
+  },
+
+  disableCAB() {
+    const engine = get()._engine;
+    if (!engine) return;
+    const cm = engine.getModule<ChangeManagementEngine>('ChangeManagementEngine');
+    cm.disableCAB();
+    set({ changeManagementState: cm.getState_CM() });
+  },
+
+  setCloudStrategy(strategy) {
+    const engine = get()._engine;
+    if (!engine) return;
+    const cs = engine.getModule<CloudStrategyEngine>('CloudStrategyEngine');
+    cs.setStrategy(strategy);
+    set({ cloudStrategyState: cs.getCloudState() });
+  },
+
+  startRegCompliance(id) {
+    const engine = get()._engine;
+    if (!engine) return;
+    const re = engine.getModule<RegulatoryEngine>('RegulatoryEngine');
+    re.startCompliance(id);
+    set({ regulatoryState: re.getRegulatoryState() });
+  },
+
+  purchaseInsurance(type) {
+    const engine = get()._engine;
+    if (!engine) return;
+    const ie = engine.getModule<InsuranceEngine>('InsuranceEngine');
+    const annualRevenue = get().monthlyRevenueEstimate * 12;
+    ie.purchasePolicy(type, annualRevenue);
+    set({ insuranceState: ie.getInsuranceState() });
+  },
+
+  cancelInsurance(policyId) {
+    const engine = get()._engine;
+    if (!engine) return;
+    const ie = engine.getModule<InsuranceEngine>('InsuranceEngine');
+    ie.cancelPolicy(policyId);
+    set({ insuranceState: ie.getInsuranceState() });
+  },
+
   setOnCallMode(mode) {
     const engine = get()._engine;
     if (!engine) return;
@@ -670,6 +813,12 @@ export const useUIStore = create<UIState>((set, get) => ({
     const compEng = engine.getModule<ComplianceEngine>('ComplianceEngine');
     const expan = engine.getModule<ExpansionEngine>('ExpansionEngine');
     const en = engine.getModule<EnergyEngine>('EnergyEngine');
+    const netEng = engine.getModule<NetworkEngine>('NetworkEngine');
+    const cmEng = engine.getModule<ChangeManagementEngine>('ChangeManagementEngine');
+    const csEng = engine.getModule<CloudStrategyEngine>('CloudStrategyEngine');
+    const regEng = engine.getModule<RegulatoryEngine>('RegulatoryEngine');
+    const insEng = engine.getModule<InsuranceEngine>('InsuranceEngine');
+    const cpEng = engine.getModule<CapacityPlanningEngine>('CapacityPlanningEngine');
 
     set({
       techDebtPoints: tde.getTotalPoints(),
@@ -681,6 +830,12 @@ export const useUIStore = create<UIState>((set, get) => ({
       hasSecondFacility: expan.hasSecondFacility(),
       energyState: en.getEnergyState(),
       activeEventChains: et.getActiveChains(),
+      networkState: netEng.getNetworkState(),
+      changeManagementState: cmEng.getState_CM(),
+      cloudStrategyState: csEng.getCloudState(),
+      regulatoryState: regEng.getRegulatoryState(),
+      insuranceState: insEng.getInsuranceState(),
+      capacityPlanningState: cpEng.getPlanningState(),
     });
 
     const bus = engine.bus;
@@ -738,6 +893,12 @@ export const useUIStore = create<UIState>((set, get) => ({
         hasSecondFacility: expan.hasSecondFacility(),
         energyState: en.getEnergyState(),
         activeEventChains: et.getActiveChains(),
+        networkState: netEng.getNetworkState(),
+        changeManagementState: cmEng.getState_CM(),
+        cloudStrategyState: csEng.getCloudState(),
+        regulatoryState: regEng.getRegulatoryState(),
+        insuranceState: insEng.getInsuranceState(),
+        capacityPlanningState: cpEng.getPlanningState(),
       });
     });
 
@@ -981,6 +1142,69 @@ export const useUIStore = create<UIState>((set, get) => ({
 
     bus.subscribe('security.dr_drill_completed', () => {
       set({ drDrills: sec.getDRDrills(), securityComplianceScore: sec.getComplianceScore() });
+    });
+
+    bus.subscribe('network.isp_added', () => {
+      set({ networkState: netEng.getNetworkState() });
+    });
+    bus.subscribe('network.isp_removed', () => {
+      set({ networkState: netEng.getNetworkState() });
+    });
+    bus.subscribe('network.ix_peering_enabled', () => {
+      set({ networkState: netEng.getNetworkState() });
+    });
+    bus.subscribe('network.redundancy_changed', () => {
+      set({ networkState: netEng.getNetworkState() });
+    });
+    bus.subscribe('network.quality_degraded', () => {
+      set({ networkState: netEng.getNetworkState() });
+    });
+
+    bus.subscribe('change.completed', () => {
+      set({ changeManagementState: cmEng.getState_CM() });
+    });
+    bus.subscribe('change.failed', () => {
+      set({ changeManagementState: cmEng.getState_CM() });
+    });
+    bus.subscribe('change.maturity_upgraded', () => {
+      set({ changeManagementState: cmEng.getState_CM() });
+    });
+
+    bus.subscribe('cloud.strategy_changed', () => {
+      set({ cloudStrategyState: csEng.getCloudState() });
+    });
+    bus.subscribe('cloud.state_updated', () => {
+      set({ cloudStrategyState: csEng.getCloudState() });
+    });
+    bus.subscribe('cloud.sovereignty_opportunity', () => {
+      set({ cloudStrategyState: csEng.getCloudState() });
+    });
+
+    bus.subscribe('regulatory.compliance_started', () => {
+      set({ regulatoryState: regEng.getRegulatoryState() });
+    });
+    bus.subscribe('regulatory.audit_result', () => {
+      set({ regulatoryState: regEng.getRegulatoryState() });
+    });
+    bus.subscribe('regulatory.compliance_achieved', () => {
+      set({ regulatoryState: regEng.getRegulatoryState() });
+    });
+
+    bus.subscribe('insurance.policy_purchased', () => {
+      set({ insuranceState: insEng.getInsuranceState() });
+    });
+    bus.subscribe('insurance.policy_cancelled', () => {
+      set({ insuranceState: insEng.getInsuranceState() });
+    });
+    bus.subscribe('insurance.claim_processed', () => {
+      set({ insuranceState: insEng.getInsuranceState() });
+    });
+    bus.subscribe('insurance.updated', () => {
+      set({ insuranceState: insEng.getInsuranceState() });
+    });
+
+    bus.subscribe('capacity.report_generated', () => {
+      set({ capacityPlanningState: cpEng.getPlanningState() });
     });
   },
 }));

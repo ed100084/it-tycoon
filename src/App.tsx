@@ -24,6 +24,12 @@ import { TechDebtEngine } from './game/modules/TechDebtEngine';
 import { ComplianceEngine } from './game/modules/ComplianceEngine';
 import { ExpansionEngine } from './game/modules/ExpansionEngine';
 import { EnergyEngine } from './game/modules/EnergyEngine';
+import { NetworkEngine } from './game/modules/NetworkEngine';
+import { ChangeManagementEngine } from './game/modules/ChangeManagementEngine';
+import { CloudStrategyEngine } from './game/modules/CloudStrategyEngine';
+import { RegulatoryEngine } from './game/modules/RegulatoryEngine';
+import { InsuranceEngine } from './game/modules/InsuranceEngine';
+import { CapacityPlanningEngine } from './game/modules/CapacityPlanningEngine';
 import { DEFAULT_CONFIG } from './game/config/default.config';
 import { useUIStore } from './store/uiStore';
 
@@ -53,7 +59,13 @@ engine
   .register(new TechDebtEngine())
   .register(new ComplianceEngine())
   .register(new ExpansionEngine())
-  .register(new EnergyEngine());
+  .register(new EnergyEngine())
+  .register(new NetworkEngine())
+  .register(new ChangeManagementEngine())
+  .register(new CloudStrategyEngine())
+  .register(new RegulatoryEngine())
+  .register(new InsuranceEngine())
+  .register(new CapacityPlanningEngine());
 
 const App: React.FC = () => {
   const [phase, setPhase] = useState<Phase>('boot');

@@ -241,6 +241,12 @@ export interface GameConfig {
   complianceCerts?: ComplianceCertsConfig;
   expansion?: ExpansionConfig;
   energy?: EnergyConfig;
+  network?: NetworkConfig;
+  changeManagement?: ChangeManagementConfig;
+  cloudStrategy?: CloudStrategyConfig;
+  regulatory?: RegulatoryConfig;
+  insurance?: InsuranceConfig;
+  capacityPlanning?: CapacityPlanningConfig;
 }
 
 // ─── Save / load ──────────────────────────────────────────────────────────────
@@ -1577,4 +1583,296 @@ export interface EnergyConfig {
   fixed3YPrepayMonths: number;
   esgRfpBonus: number;
   esgThresholdForBonus: number;
+}
+
+// ─── Network types ────────────────────────────────────────────────────────────
+
+export enum ISPProvider {
+  Chunghwa   = 'CHUNGHWA',
+  FarEasTone = 'FAR_EAST_TONE',
+  APT        = 'APT',
+}
+
+export enum BandwidthTier {
+  B100M = '100M',
+  B1G   = '1G',
+  B10G  = '10G',
+  B100G = '100G',
+}
+
+export enum RedundancyMode {
+  SingleLink = 'SINGLE',
+  DualISP    = 'DUAL_ISP',
+  BGPMulti   = 'BGP_MULTI',
+}
+
+export interface ISPContract {
+  id: EntityId;
+  provider: ISPProvider;
+  tier: BandwidthTier;
+  monthlyFeeNTD: Money;
+  reliability: number;
+  startDate: GameDate;
+}
+
+export interface NetworkState {
+  ispContracts: ISPContract[];
+  totalBandwidthMbps: number;
+  usedBandwidthMbps: number;
+  redundancyMode: RedundancyMode;
+  ixPeering: boolean;
+  bandwidthUtilization: number;
+  qualityDegradationActive: boolean;
+}
+
+export interface NetworkBandwidthTierDef {
+  mbps: number;
+  monthlyFeeNTD: Money;
+  unlockYear: number;
+}
+
+export interface NetworkISPProviderDef {
+  reliability: number;
+  costMultiplier: number;
+}
+
+export interface NetworkConfig {
+  bandwidthTiers: Record<BandwidthTier, NetworkBandwidthTierDef>;
+  ispProviders: Record<ISPProvider, NetworkISPProviderDef>;
+  ixPeeringUnlockYear: number;
+  ixPeeringAnnualFeeNTD: Money;
+  ixPeeringBandwidthDiscount: number;
+  utilizationWarningThreshold: number;
+  utilizationSLADegradationThreshold: number;
+  bandwidthMbpsPerContract: number;
+}
+
+// ─── Change management types ──────────────────────────────────────────────────
+
+export enum ChangeType {
+  Standard  = 'STANDARD',
+  Normal    = 'NORMAL',
+  Emergency = 'EMERGENCY',
+}
+
+export enum ChangeStatus {
+  Pending   = 'PENDING',
+  Approved  = 'APPROVED',
+  Executing = 'EXECUTING',
+  Completed = 'COMPLETED',
+  Failed    = 'FAILED',
+  Rejected  = 'REJECTED',
+}
+
+export interface ChangeRequest {
+  id: EntityId;
+  type: ChangeType;
+  title: string;
+  status: ChangeStatus;
+  submittedAt: GameDate;
+  scheduledAt: GameDate | null;
+  completedAt: GameDate | null;
+  failureRisk: number;
+  actuallyFailed: boolean;
+  isShadow: boolean;
+}
+
+export interface ChangeManagementState {
+  maturityLevel: number;
+  pendingChanges: ChangeRequest[];
+  changeLog: ChangeRequest[];
+  cabEnabled: boolean;
+  shadowChangeCount: number;
+  totalChanges: number;
+}
+
+export interface ChangeManagementConfig {
+  emergencyFailureRisk: number;
+  shadowChangeFailureRisk: number;
+  normalChangeDelayMonths: number;
+  cabCostPerMonthNTD: Money;
+  maturityLevelThresholds: number[];
+}
+
+// ─── Cloud strategy types ─────────────────────────────────────────────────────
+
+export enum CloudStrategy {
+  OnPrem = 'ON_PREM',
+  Hybrid = 'HYBRID',
+  MSP    = 'MSP',
+}
+
+export interface CloudStrategyState {
+  strategy: CloudStrategy;
+  cloudPressure: number;
+  migrationRiskPerMonth: number;
+  hybridContractCount: number;
+  cloudRevenueMonthly: Money;
+  cloudCompeteActive: boolean;
+  dataSovereigntyOpportunity: boolean;
+  hybridInvestmentDone: boolean;
+  mspTransformDone: boolean;
+}
+
+export interface CloudStrategyConfig {
+  cloudCompeteStartYear: number;
+  dataSovereigntyStartYear: number;
+  cloudPressureGrowthPerYear: number;
+  hybridInvestmentCostNTD: Money;
+  mspTransformCostNTD: Money;
+  baseMigrationRiskPerMonth: number;
+  hybridRevenuePerContract: Money;
+  mspRevenueMultiplier: number;
+}
+
+// ─── Regulatory types ─────────────────────────────────────────────────────────
+
+export enum RegulationId {
+  FSC_InfoSec    = 'FSC_INFO_SEC',
+  PersonalData   = 'PERSONAL_DATA',
+  GDPR           = 'GDPR',
+  CriticalInfra  = 'CRITICAL_INFRA',
+  DigitalEconomy = 'DIGITAL_ECONOMY',
+}
+
+export enum RegComplianceStatus {
+  Compliant    = 'COMPLIANT',
+  NonCompliant = 'NON_COMPLIANT',
+  InProgress   = 'IN_PROGRESS',
+  NotActive    = 'NOT_ACTIVE',
+}
+
+export interface RegulationDef {
+  id: RegulationId;
+  name: string;
+  effectiveYear: number;
+  complianceCostNTD: Money;
+  annualMaintenanceCostNTD: Money;
+  penaltyNTD: Money;
+  reputationPenalty: number;
+  description: string;
+}
+
+export interface RegulatoryAuditRecord {
+  date: GameDate;
+  regulationId: RegulationId;
+  passed: boolean;
+  fine: Money;
+}
+
+export interface RegulatoryState {
+  activeRegulations: RegulationId[];
+  complianceStatus: Partial<Record<RegulationId, RegComplianceStatus>>;
+  totalFines: Money;
+  auditHistory: RegulatoryAuditRecord[];
+  lastAuditDate: GameDate | null;
+  nextAuditDate: GameDate | null;
+}
+
+export interface RegulatoryConfig {
+  auditFrequencyMonthsMin: number;
+  auditFrequencyMonthsMax: number;
+  auditFailReputationPenalty: number;
+}
+
+// ─── Insurance types ──────────────────────────────────────────────────────────
+
+export enum InsuranceType {
+  CyberSecurity        = 'CYBER_SECURITY',
+  BusinessInterruption = 'BUSINESS_INTERRUPTION',
+  DAndO                = 'D_AND_O',
+  EAndO                = 'E_AND_O',
+}
+
+export interface InsurancePolicy {
+  id: EntityId;
+  type: InsuranceType;
+  annualPremiumNTD: Money;
+  coverageAmount: Money;
+  coverageRate: number;
+  startDate: GameDate;
+  renewalDate: GameDate;
+  isActive: boolean;
+  claimCount: number;
+}
+
+export interface InsuranceClaim {
+  date: GameDate;
+  type: InsuranceType;
+  originalLossNTD: Money;
+  coveredAmountNTD: Money;
+}
+
+export interface InsuranceState {
+  policies: InsurancePolicy[];
+  totalAnnualPremium: Money;
+  totalCoverage: Money;
+  claimsHistory: InsuranceClaim[];
+  premiumMultiplier: number;
+}
+
+export interface InsurancePolicyDef {
+  basePremiumRate: number;
+  coverageRate: number;
+  minAnnualPremiumNTD: Money;
+  maxAnnualPremiumNTD: Money;
+}
+
+export interface InsuranceConfig {
+  policyDefs: Record<InsuranceType, InsurancePolicyDef>;
+  claimPremiumIncrease: number;
+  complianceDiscountRate: number;
+}
+
+// ─── Capacity planning types ──────────────────────────────────────────────────
+
+export enum CapacityAlert {
+  Green  = 'GREEN',
+  Yellow = 'YELLOW',
+  Red    = 'RED',
+}
+
+export interface CapacityMetric {
+  name: string;
+  currentValue: number;
+  maxValue: number;
+  utilizationRate: number;
+  trend: number[];
+  forecastedUtilization6M: number;
+  alert: CapacityAlert;
+}
+
+export interface CapacityRecommendation {
+  type: 'rack' | 'bandwidth' | 'power' | 'staff';
+  description: string;
+  urgency: CapacityAlert;
+  estimatedCostNTD: Money;
+}
+
+export interface CapacityMonthSnapshot {
+  date: GameDate;
+  rackUtil: number;
+  bwUtil: number;
+  powerUtil: number;
+  staffCoverage: number;
+}
+
+export interface CapacityPlanningState {
+  metrics: {
+    rackUtilization: CapacityMetric;
+    bandwidthUtilization: CapacityMetric;
+    powerUtilization: CapacityMetric;
+    staffCoverage: CapacityMetric;
+  };
+  alerts: CapacityAlert[];
+  recommendations: CapacityRecommendation[];
+  lastReportDate: GameDate | null;
+  monthlyHistory: CapacityMonthSnapshot[];
+}
+
+export interface CapacityPlanningConfig {
+  warningThreshold: number;
+  criticalThreshold: number;
+  forecastMonths: number;
+  historyMonths: number;
 }
